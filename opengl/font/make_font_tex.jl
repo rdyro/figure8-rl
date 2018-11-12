@@ -18,7 +18,7 @@ function main()
   close(fp)
 
   # convert ascii to a bitmap with ImageMagick
-  run(`convert -background transparent -font font.ttf -pointsize 32 label:@ascii.txt font.bmp`)
+  run(`convert -background transparent -font Courier -pointsize 64 label:@ascii.txt font.bmp`)
 
   # write the bmp to row major binary data for OpenGL
   img = load("font.bmp")

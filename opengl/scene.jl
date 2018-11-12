@@ -3,7 +3,7 @@ using ModernGL
 
 include("drawing.jl")
 
-function make_road(x::AbstractArray, y::AbstractArray, t::Float64, attributes)
+function make_road(x::AbstractArray, y::AbstractArray, t::Float64)
   @assert length(x) == length(y) > 1
   len = length(x)
 
@@ -59,7 +59,7 @@ function make_road(x::AbstractArray, y::AbstractArray, t::Float64, attributes)
     indices[2 * 3 * (i - 1) + 6] = 2 * (i - 1) + 2 - 1
   end
 
-  return draw_object([draw_data(points, 2), draw_data(color, 3),
-                      draw_data(usetex, 1), draw_data(texcoord, 2)],
-                     attributes, indices)
+  return RenderObject([RenderData(points, 2), RenderData(color, 3),
+                       RenderData(usetex, 1), RenderData(texcoord, 2)],
+                      attributes, indices)
 end
