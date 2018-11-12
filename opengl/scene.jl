@@ -27,6 +27,8 @@ function make_road(x::AbstractArray, y::AbstractArray, t::Float64, attributes)
   # allocate CPU memory for vertices objects
   points = fill(GLfloat(0), 2 * 2 * len)
   color = fill(GLfloat(0), 2 * 3 * len)
+  usetex = fill(GLfloat(0), 2 * len)
+  texcoord = fill(GLfloat(0), 2 * 2 * len)
   indices = fill(GLuint(0), 2 * 3 * (len - 1))
 
   # create points and colors
@@ -57,6 +59,7 @@ function make_road(x::AbstractArray, y::AbstractArray, t::Float64, attributes)
     indices[2 * 3 * (i - 1) + 6] = 2 * (i - 1) + 2 - 1
   end
 
-  return draw_object([draw_data(points, 2), draw_data(color, 3)], 
+  return draw_object([draw_data(points, 2), draw_data(color, 3),
+                      draw_data(usetex, 1), draw_data(texcoord, 2)],
                      attributes, indices)
 end

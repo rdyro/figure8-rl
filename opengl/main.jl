@@ -1,5 +1,6 @@
 using GLFW
 using ModernGL
+using Serialization
 include("util.jl")
 include("drawing.jl")
 include("scene.jl")
@@ -31,6 +32,10 @@ function make_shader_program(vsh::String, fsh::String)
   return program
 end
 
+global const positionAttribute = Ref{GLint}()
+global const colorAttribute = Ref{GLint}()
+global const usetexAttribute = Ref{GLint}()
+global const texcoordAttribute = Ref{GLint}()
 function main()
   # handle GLFW loading #######################################################
   window_width = 1080
@@ -48,9 +53,12 @@ function main()
 
 
   #############################################################################
-  positionAttribute = glGetAttribLocation(program, "position")
-  colorAttribute = glGetAttribLocation(program, "color")
-  attributes = [positionAttribute, colorAttribute]
+  positionAttribute[] = glGetAttribLocation(program, "position")
+  colorAttribute[] = glGetAttribLocation(program, "color")
+  usetexAttribute[] = glGetAttribLocation(program, "usetex")
+  texcoordAttribute[] = glGetAttribLocation(program, "texcoord")
+  attributes = [positionAttribute[], colorAttribute[], 
+                usetexAttribute[], texcoordAttribute[]]
   #############################################################################
   #attributes = GLint[0, 0]
 
@@ -65,11 +73,13 @@ function main()
                    1.0, 0.0, 0.0,
                    0.0, 1.0, 0.0]
   indices2 = GLuint[0, 1, 2]
-  object2 = draw_object([draw_data(data2, 2), draw_data(color2, 3)], 
+  object2 = draw_object([draw_data(data2, 2), draw_data(color2, 3),
+                         draw_data(fill(GLfloat(0), 3), 1), 
+                         draw_data(fill(GLfloat(0), 2 * 3), 2)],
                         attributes, indices2)
   #############################################################################
 
-  th = range(0, stop=(2 * pi), length=1000)
+  th = range(0, stop=(2 * pi), length=30)
   r = 0.6
   x = fill(0.0, length(th))
   y = fill(0.0, length(th))
@@ -82,7 +92,84 @@ function main()
 
   object3 = make_road(x, y, 0.1, attributes)
 
+
+  points4 = GLfloat[0.5, 0.5,
+                    0.5, 1.0,
+                    1.0, 1.0,
+                    1.0, 0.5]
+  color4 = repeat(GLfloat[1.0, 0.0, 0.0], 4)
+  usetex4 = fill(GLfloat(1.0), 4)
+  texcoord4 = GLfloat[0.0, 1.0,
+                      0.0, 0.0,
+                      1.0, 0.0,
+                      1.0, 1.0]
+  indices4 = GLuint[0, 1, 2, 
+                    0, 2, 3]
+  object4 = draw_object([draw_data(points4, 2), draw_data(color4, 3),
+                         draw_data(usetex4, 1), draw_data(texcoord4, 2)],
+                        attributes, indices4)
+
+
+  textureBuffer = glGenTexture()
+  glActiveTexture(GL_TEXTURE0)
+
+  #=
+  pixels = GLfloat[1.0, 1.0, 1.0,
+                   0.0, 0.0, 0.0,
+                   1.0, 1.0, 1.0,
+                   0.0, 0.0, 0.0]
+  =#
+  fp = open("text/ascii.bin", "r")
+  pixels = deserialize(fp)
+  close(fp)
+  (w, h) = size(pixels)
+  w = div(w, 3)
+  glBindTexture(GL_TEXTURE_2D, textureBuffer)
+  glBindTexture(GL_TEXTURE_2D, textureBuffer)                                   
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_FLOAT, pixels);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);          
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);          
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);            
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);            
+
+  glUniform1i(glGetUniformLocation(program, "tex"), 0) 
+
+
+
+
+
+
+
+  #=
+  va = glGenVertexArray()
+  glBindVertexArray(va)
+
+  pb = glGenBuffer()
+  data = GLfloat[-0.5, -0.5, 
+  0.0, 0.0,
+  0.0, 0.0,
+  0.5, 0.5]
+  glBindBuffer(GL_ARRAY_BUFFER, pb)
+  glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW)
+  glVertexAttribPointer(positionAttribute, 2, GL_FLOAT, false, 0, C_NULL)
+  glEnableVertexAttribArray(positionAttribute)
+
+  cb = glGenBuffer()
+  data = repeat(GLfloat[0.0, 0.0, 0.0], 4)
+  glBindBuffer(GL_ARRAY_BUFFER, cb)
+  glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW)
+  glVertexAttribPointer(colorAttribute, 3, GL_FLOAT, false, 0, C_NULL)
+  glEnableVertexAttribArray(colorAttribute)
+
+  glBindVertexArray(0)
+  =#
+
+  init_lines()
+  draw_line(0.0, 0.0, 0.5, 0.5, repeat([0.0], 6))
+
   #############################################################################
+  #glViewport(0, 0, window_width, window_height)
   while !GLFW.WindowShouldClose(window)
     glClearColor(1.0, 1.0, 1.0, 1.0)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -94,6 +181,10 @@ function main()
     #render(object1)
     render(object2)
     render(object3)
+    render(object4)
+
+    render_lines()
+
 
     GLFW.SwapBuffers(window)
     GLFW.PollEvents()
@@ -103,6 +194,15 @@ function main()
   #############################################################################
   GLFW.DestroyWindow(window)
   #############################################################################
+
+  return
+end
+
+function print_error()
+  err = glErrorMessage()
+  if err != ""
+    println(err)
+  end
 end
 
 main()
