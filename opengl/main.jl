@@ -93,10 +93,10 @@ function main()
   object3 = make_road(x, y, 0.1, attributes)
 
 
-  points4 = GLfloat[0.5, 0.5,
-                    0.5, 1.0,
-                    1.0, 1.0,
-                    1.0, 0.5]
+  points4 = GLfloat[-1.0, 0.5,
+                    -1.0, 1.0,
+                    0.0, 1.0,
+                    0.0, 0.5]
   color4 = repeat(GLfloat[1.0, 0.0, 0.0], 4)
   usetex4 = fill(GLfloat(1.0), 4)
   texcoord4 = GLfloat[0.0, 1.0,
@@ -119,14 +119,17 @@ function main()
                    1.0, 1.0, 1.0,
                    0.0, 0.0, 0.0]
   =#
-  fp = open("text/ascii.bin", "r")
+  fp = open("font/font.bin", "r")
   pixels = deserialize(fp)
   close(fp)
   (w, h) = size(pixels)
-  w = div(w, 3)
+  w = div(w, 4)
+
+  glEnable(GL_BLEND)
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
   glBindTexture(GL_TEXTURE_2D, textureBuffer)
   glBindTexture(GL_TEXTURE_2D, textureBuffer)                                   
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_FLOAT, pixels);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_FLOAT, pixels);
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);          
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);          
