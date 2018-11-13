@@ -61,5 +61,5 @@ function make_road(x::AbstractArray, y::AbstractArray, t::Float64)
 
   return RenderObject([RenderData(points, 2), RenderData(color, 3),
                        RenderData(usetex, 1), RenderData(texcoord, 2)],
-                      attributes, indices)
+                      attributes, indices, STATIC)
 end

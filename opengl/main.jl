@@ -102,7 +102,7 @@ function main()
   object2 = RenderObject([RenderData(data2, 2), RenderData(color2, 3),
                           RenderData(fill(GLfloat(0), 3), 1), 
                           RenderData(fill(GLfloat(0), 2 * 3), 2)],
-                         attributes, indices2)
+                         attributes, indices2, STATIC)
 
 
   # road
@@ -133,12 +133,13 @@ function main()
                     0, 2, 3]
   object4 = RenderObject([RenderData(points4, 2), RenderData(color4, 3),
                           RenderData(usetex4, 1), RenderData(texcoord4, 2)],
-                         attributes, indices4)
+                         attributes, indices4, STATIC)
 
   # line
   color = [1.0, 0.0, 0.0,
            0.0, 0.0, 1.0]
   l1 = make_line(0.0, 0.0, 0.5, -0.5, color)
+  s1 = make_text(string(time_ns()), 0.0, 0.0)
 
   # Main Render Loop ----------------------------------------------------------
   #glViewport(0, 0, window_width, window_height)
@@ -154,8 +155,12 @@ function main()
     render(object3)
     render(object4)
 
+    t = time_ns() / 1e9
+    points = GLfloat[0.0, 0.0, cos(t), sin(t)]
+    update_buffer!(l1, points, attributes[1])
     render(l1)
-    s1 = make_string(string(time_ns()), 0.0, 0.0)
+
+    s1 = update_text!(s1, string(time_ns()), 0.0, 0.0)
     render(s1)
 
 

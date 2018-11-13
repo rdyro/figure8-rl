@@ -1,5 +1,10 @@
 using ModernGL
 
+@enum RenderType begin
+  STATIC
+  DYNAMIC
+end
+
 mutable struct RenderData
   data::AbstractArray{GLfloat}
   dim::Integer
@@ -12,14 +17,13 @@ mutable struct RenderObject
   attributes::AbstractArray{GLint}
   indices::Union{AbstractArray{GLuint}, Nothing}
   idx_buffer::Union{GLuint, Nothing}
+  tp::RenderType
 end
-
-RenderObject(render_data, attributes) = RenderObject(render_data, 
-                                                     attributes, nothing)
 
 function RenderObject(render_data::AbstractArray{RenderData},
                       attributes::AbstractArray{GLint},
-                      indices::Union{AbstractArray{GLuint}, Nothing}) 
+                      indices::Union{AbstractArray{GLuint}, Nothing}, 
+                      tp::RenderType) 
   vertex_array = glGenVertexArray()
   glBindVertexArray(vertex_array)
 
@@ -44,7 +48,7 @@ function RenderObject(render_data::AbstractArray{RenderData},
   glBindVertexArray(0)
 
   return RenderObject(vertex_array, render_data, render_buffers, attributes, 
-                      indices, idx_buffer)
+                      indices, idx_buffer, tp)
 end
 
 function render(obj::RenderObject)
@@ -59,12 +63,25 @@ function render(obj::RenderObject)
   glBindVertexArray(0)
 end
 
+function update_buffer!(obj::RenderObject, render_data::Array{GLfloat},
+                        attribute::GLint)
+  attr_idx = findfirst(x -> x == attribute, obj.attributes)
+  @assert sizeof(render_data) == sizeof(obj.render_data[attr_idx].data)
+
+  #glBindVertexArray(obj.vertex_array)
+  glBindBuffer(GL_ARRAY_BUFFER, obj.render_buffers[attr_idx])
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(render_data), 
+                  render_data)
+  #glBindVertexArray(0)
+end
+
 function scaleM(x, y, z)
   return GLfloat[x 0 0 0;
                  0 y 0 0;
                  0 0 z 0;
                  0 0 0 1]
 end
+
 
 function rotationM(th)
   return GLfloat[cos(th) -sin(th) 0 0;
@@ -80,7 +97,8 @@ function make_line(x1::Float64, y1::Float64, x2::Float64, y2::Float64,
   return RenderObject([RenderData(GLfloat[x1, y1, x2, y2], 2),
                        RenderData(Array{GLfloat}(colors), 3),
                        RenderData(fill(GLfloat(0), 2), 1),
-                       RenderData(fill(GLfloat(0), 4), 2)], attributes)
+                       RenderData(fill(GLfloat(0), 4), 2)], attributes, 
+                      nothing, DYNAMIC)
 end
 
 function _make_letter(c::Char, x::Float64, y::Float64, 
@@ -107,7 +125,7 @@ function _make_letter(c::Char, x::Float64, y::Float64,
   return (position, colors, usetex, texcoord, indices)
 end
 
-function make_string(s::AbstractString, x::Float64, y::Float64)
+function make_text(s::AbstractString, x::Float64, y::Float64)
   offset = 0
 
   dx = 0.05
@@ -135,5 +153,30 @@ function make_string(s::AbstractString, x::Float64, y::Float64)
   end
 
   return RenderObject([RenderData(P, 2), RenderData(C, 3), RenderData(U, 1), 
-                       RenderData(T, 2)], attributes, I)
+                       RenderData(T, 2)], attributes, I, DYNAMIC)
+end
+
+function update_text!(obj::RenderObject, s::AbstractString, x::Float64, 
+                      y::Float64)
+  tdx = 1 / 32
+  tdy = 1 / 8
+
+  if div(length(obj.render_data[1].data), 
+         obj.render_data[1].dim * 4) == length(s)
+    T = GLfloat[]
+    for c in s
+      tx = rem(Int(c), 32) / 32
+      ty = div(Int(c), 32) / 8
+      texcoord = GLfloat[tx, ty + tdy,
+                         tx, ty,
+                         tx + tdx, ty,
+                         tx + tdx, ty + tdy]
+      append!(T, texcoord)
+    end
+    update_buffer!(obj, T, attributes[4])
+    return obj
+  else
+    println("Making new text")
+    return make_text(s, x, y)
+  end
 end
