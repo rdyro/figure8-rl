@@ -92,17 +92,19 @@ function main()
 
   # Make a Bunch of Test Objects ----------------------------------------------
   # triangle
-  data2 = GLfloat[-1.0, 1.0,
-                  -1.0, -1.0,
-                  -0.1, 0.0]
-  color2 = GLfloat[0.0, 0.0, 1.0,
-                   1.0, 0.0, 0.0,
-                   0.0, 1.0, 0.0]
-  indices2 = GLuint[0, 1, 2]
-  object2 = RenderObject([RenderData(data2, 2), RenderData(color2, 3),
-                          RenderData(fill(GLfloat(0), 3), 1), 
-                          RenderData(fill(GLfloat(0), 2 * 3), 2)],
-                         attributes, indices2, STATIC)
+  position_data = GLfloat[-1.0, 1.0, 
+                          -1.0, -1.0, 
+                          -0.1, 0.0]
+  position = RenderData(position_data, 2, GL_STATIC_DRAW)
+
+  color_data = GLfloat[0.0, 0.0, 1.0, 
+                       1.0, 0.0, 0.0, 
+                       0.0, 1.0, 0.0]
+  color = RenderData(color_data, 3, GL_STATIC_DRAW)
+  usetex = RenderData(fill(GLfloat(0), 3), 1, GL_STATIC_DRAW)
+  texcoord = RenderData(fill(GLfloat(0), 6), 2, GL_STATIC_DRAW)
+  idx = GLuint[0, 1, 2]
+  object2 = RenderObject([position, color, usetex, texcoord], attributes, idx)
 
 
   # road
@@ -114,35 +116,37 @@ function main()
     x[i] = r * cos(th[i])
     y[i] = r * sin(th[i])
   end
-
   object3 = make_road(x, y, 0.1)
 
 
   # font square
-  points4 = GLfloat[-1.0, 0.5,
-                    -1.0, 1.0,
-                    0.0, 1.0,
-                    0.0, 0.5]
-  color4 = repeat(GLfloat[1.0, 0.0, 0.0], 4)
-  usetex4 = fill(GLfloat(1.0), 4)
-  texcoord4 = GLfloat[0.0, 1.0,
-                      0.0, 0.0,
-                      1.0, 0.0,
-                      1.0, 1.0]
-  indices4 = GLuint[0, 1, 2, 
-                    0, 2, 3]
-  object4 = RenderObject([RenderData(points4, 2), RenderData(color4, 3),
-                          RenderData(usetex4, 1), RenderData(texcoord4, 2)],
-                         attributes, indices4, STATIC)
+  position_data = GLfloat[-1.0, 0.5,
+                          -1.0, 1.0,
+                          0.0, 1.0,
+                          0.0, 0.5]
+  position = RenderData(position_data, 2, GL_STATIC_DRAW)
+  color = RenderData(repeat(GLfloat[1.0, 0.0, 0.0], 4), 3, GL_STATIC_DRAW)
+  usetex = RenderData(fill(GLfloat(1.0), 4), 1, GL_STATIC_DRAW)
+  texcoord_data = GLfloat[0.0, 1.0,
+                          0.0, 0.0,
+                          1.0, 0.0,
+                          1.0, 1.0]
+  texcoord = RenderData(texcoord_data, 2, GL_STATIC_DRAW)
+  idx = GLuint[0, 1, 2, 
+               0, 2, 3]
+  object4 = RenderObject([position, color, usetex, texcoord], attributes, idx)
 
   # line
-  color = [1.0, 0.0, 0.0,
-           0.0, 0.0, 1.0]
+  color = [0.0, 0.0, 0.0]
   l1 = make_line(0.0, 0.0, 0.5, -0.5, color)
   s1 = make_text(string(time_ns()), 0.0, 0.0)
 
   # Main Render Loop ----------------------------------------------------------
   #glViewport(0, 0, window_width, window_height)
+  k = 0
+  text = ""
+
+  car1 = make_car()
   while !GLFW.WindowShouldClose(window)
     glClearColor(1.0, 1.0, 1.0, 1.0)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -160,9 +164,18 @@ function main()
     update_buffer!(l1, points, attributes[1])
     render(l1)
 
-    s1 = update_text!(s1, string(time_ns()), 0.0, 0.0)
+    if k == 60
+      #text = string(rand(1:100))
+      #update_text!(s1, text, 0.0, 0.0)
+      car_lights!(car1)
+      k = 0
+    end
+    update_text!(s1, string(time_ns()), 0.0, 0.0)
     render(s1)
 
+    render(car1)
+
+    k += 1
 
     GLFW.SwapBuffers(window)
     GLFW.PollEvents()

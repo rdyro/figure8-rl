@@ -1,87 +1,138 @@
 using ModernGL
 
-@enum RenderType begin
-  STATIC
-  DYNAMIC
-end
-
+# Rendering Abstraction #######################################################
 mutable struct RenderData
   data::AbstractArray{GLfloat}
   dim::Integer
+  usage::GLenum
+end
+
+struct RenderBuffer
+  id::GLuint
+  size::Int
+  usage::GLenum
 end
 
 mutable struct RenderObject
   vertex_array::GLuint
-  render_data::AbstractArray{RenderData}
-  render_buffers::AbstractArray{GLuint}
+  render_buffers::AbstractArray{RenderBuffer}
   attributes::AbstractArray{GLint}
-  indices::Union{AbstractArray{GLuint}, Nothing}
-  idx_buffer::Union{GLuint, Nothing}
-  tp::RenderType
+  elnb::Int
+  idx_buffer::Union{RenderBuffer, Nothing}
 end
 
 function RenderObject(render_data::AbstractArray{RenderData},
                       attributes::AbstractArray{GLint},
-                      indices::Union{AbstractArray{GLuint}, Nothing}, 
-                      tp::RenderType) 
+                      idxXORelnb::Union{AbstractArray{GLuint}, Int})
+  # save the configuration in the vertex array
   vertex_array = glGenVertexArray()
   glBindVertexArray(vertex_array)
 
-  render_buffers = fill(GLuint(0), length(render_data))
+  # allocate the buffers, buffer data and set attributes
+  render_buffers = Array{RenderBuffer, 1}(undef, length(render_data))
   for i in 1:length(render_data)
-    render_buffers[i] = glGenBuffer()
-    glBindBuffer(GL_ARRAY_BUFFER, render_buffers[i])
-    glBufferData(GL_ARRAY_BUFFER, sizeof(render_data[i].data), 
-                 render_data[i].data, GL_STATIC_DRAW)
+    render_buffers[i] = RenderBuffer(glGenBuffer(), 
+                                     sizeof(render_data[i].data), 
+                                     render_data[i].usage)
+    glBindBuffer(GL_ARRAY_BUFFER, render_buffers[i].id)
+    # usage is GL_STATIC_DRAW or GL_DYNAMIC_DRAW
+    glBufferData(GL_ARRAY_BUFFER, render_buffers[i].size, 
+                 render_data[i].data, render_buffers[i].usage)
     glVertexAttribPointer(attributes[i], render_data[i].dim, GL_FLOAT, false, 
                           0, C_NULL)
     glEnableVertexAttribArray(attributes[i])
   end
 
+  # allocate the index buffer for drawing normal objects
   idx_buffer = nothing
-  if indices != nothing
-    idx_buffer = glGenBuffer()
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, idx_buffer)
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, 
-                 GL_STATIC_DRAW)
+  elnb = 0
+  if typeof(idxXORelnb) == Int
+    idx_buffer = nothing
+    elnb = idxXORelnb
+  else
+    idx = idxXORelnb
+    idx_buffer = RenderBuffer(glGenBuffer(), sizeof(idx), GL_DYNAMIC_DRAW)
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, idx_buffer.id)
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(idx), idx, idx_buffer.usage)
+    elnb = length(idx)
   end
+
+  # finish saving the configuration
   glBindVertexArray(0)
 
-  return RenderObject(vertex_array, render_data, render_buffers, attributes, 
-                      indices, idx_buffer, tp)
+  return RenderObject(vertex_array, render_buffers, attributes, elnb, 
+                      idx_buffer)
 end
 
 function render(obj::RenderObject)
   glBindVertexArray(obj.vertex_array)
-  if obj.indices != nothing
-    glDrawElements(GL_TRIANGLES, length(obj.indices), GL_UNSIGNED_INT,
-                   Ptr{Nothing}(0))
+  if obj.idx_buffer != nothing
+    glDrawElements(GL_TRIANGLES, obj.elnb, GL_UNSIGNED_INT, Ptr{Nothing}(0))
   else
-    glDrawArrays(GL_LINES, 0, div(length(obj.render_data[1].data), 
-                                  obj.render_data[1].dim))
+    glDrawArrays(GL_LINES, 0, obj.elnb)
   end
   glBindVertexArray(0)
 end
 
-function update_buffer!(obj::RenderObject, render_data::Array{GLfloat},
+
+# Updating Data ###############################################################
+function update_buffer!(obj::RenderObject, data::Array{GLfloat}, 
                         attribute::GLint)
   attr_idx = findfirst(x -> x == attribute, obj.attributes)
-  @assert sizeof(render_data) == sizeof(obj.render_data[attr_idx].data)
+  if sizeof(data) <= obj.render_buffers[attr_idx].size
+    glBindBuffer(GL_ARRAY_BUFFER, obj.render_buffers[attr_idx].id)
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(data), data)
+  else
+    println("RESIZING BUFFER")
 
-  #glBindVertexArray(obj.vertex_array)
-  glBindBuffer(GL_ARRAY_BUFFER, obj.render_buffers[attr_idx])
-  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(render_data), 
-                  render_data)
-  #glBindVertexArray(0)
+    id = obj.render_buffers[attr_idx].id
+    usage = obj.render_buffers[attr_idx].usage
+    size = sizeof(data)
+    new_buffer = RenderBuffer(id, size, usage)
+    obj.render_buffers[attr_idx] = new_buffer
+
+    glBindBuffer(GL_ARRAY_BUFFER, obj.render_buffers[attr_idx].id)
+    glBufferData(GL_ARRAY_BUFFER, obj.render_buffers[attr_idx].size, data, 
+                 obj.render_buffers[attr_idx].usage)
+  end
 end
 
+function update_idx!(obj::RenderObject, 
+                     idxXORelnb::Union{Array{GLuint}, Int})
+  @assert ((obj.idx_buffer == nothing && typeof(idxXORelnb) == Int) ||
+           (obj.idx_buffer != nothing && 
+            typeof(idxXORelnb) == Array{GLuint, 1}))
+  if obj.idx_buffer != nothing
+    idx = idxXORelnb
+    if sizeof(idx) <= obj.idx_buffer.size
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj.idx_buffer.id)
+      glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(idx), idx)
+    else
+      println("RESIZING IDX")
+
+      id = obj.idx_buffer.id
+      usage = obj.idx_buffer.usage
+      size = sizeof(idx)
+      new_buffer = RenderBuffer(id, size, usage)
+      obj.idx_buffer = new_buffer
+
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj.idx_buffer.id)
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.idx_buffer.size, idx, 
+                   GL_DYNAMIC_DRAW)
+    end
+    obj.elnb = length(idx)
+  else
+    obj.elnb = idxXORelnb
+  end
+end
+
+# Matrices ####################################################################
 function scaleM(x, y, z)
   return GLfloat[x 0 0 0;
                  0 y 0 0;
                  0 0 z 0;
                  0 0 0 1]
 end
-
 
 function rotationM(th)
   return GLfloat[cos(th) -sin(th) 0 0;
@@ -90,19 +141,22 @@ function rotationM(th)
                  0 0 0 1]
 end
 
+# Line Drawing ################################################################
 function make_line(x1::Float64, y1::Float64, x2::Float64, y2::Float64,
-                   colors::AbstractArray{Float64})
-  @assert length(colors) == 6
+                   color::AbstractArray{Float64})
+  @assert length(color) == 3
 
-  return RenderObject([RenderData(GLfloat[x1, y1, x2, y2], 2),
-                       RenderData(Array{GLfloat}(colors), 3),
-                       RenderData(fill(GLfloat(0), 2), 1),
-                       RenderData(fill(GLfloat(0), 4), 2)], attributes, 
-                      nothing, DYNAMIC)
+  position = RenderData(GLfloat[x1, y1, x2, y2], 2, GL_DYNAMIC_DRAW)
+  color = RenderData(Array{GLfloat}(repeat(color, 2)), 3, GL_STATIC_DRAW)
+  usetex = RenderData(fill(GLfloat(0), 2), 1, GL_STATIC_DRAW)
+  texcoord = RenderData(fill(GLfloat(0), 4), 2, GL_DYNAMIC_DRAW)
+  elnb = 4
+  return RenderObject([position, color, usetex, texcoord], attributes, elnb)
 end
 
-function _make_letter(c::Char, x::Float64, y::Float64, 
-                      dx::Float64, dy::Float64)
+# Text Drawing ################################################################
+function _make_letter(c::Char, x::Float64, y::Float64, dx::Float64, 
+                      dy::Float64)
   tx = rem(Int(c), 32) / 32
   ty = div(Int(c), 32) / 8
 
@@ -125,12 +179,13 @@ function _make_letter(c::Char, x::Float64, y::Float64,
   return (position, colors, usetex, texcoord, indices)
 end
 
-function make_text(s::AbstractString, x::Float64, y::Float64)
+function _make_text_data(text::AbstractString, x::Float64, y::Float64, 
+                         scale::Float64)
   offset = 0
 
-  dx = 0.05
-  dy = 0.1
-  width = length(s) * dx
+  dx = 0.05 * scale
+  dy = 0.1 * scale
+  width = length(text) * dx
 
   P = GLfloat[]
   C = GLfloat[]
@@ -138,9 +193,9 @@ function make_text(s::AbstractString, x::Float64, y::Float64)
   U = GLfloat[]
   I = GLuint[]
 
-  len = (length(s) - 1) / 2
+  len = (length(text) - 1) / 2
   k = 0
-  for c in s
+  for c in text
     (p, c, u, t, i) = _make_letter(c, x - (len - k) * dx, y, dx, dy)
     append!(P, p)
     append!(C, c)
@@ -152,31 +207,29 @@ function make_text(s::AbstractString, x::Float64, y::Float64)
     k += 1
   end
 
-  return RenderObject([RenderData(P, 2), RenderData(C, 3), RenderData(U, 1), 
-                       RenderData(T, 2)], attributes, I, DYNAMIC)
+  return (P, C, U, T, I)
 end
 
-function update_text!(obj::RenderObject, s::AbstractString, x::Float64, 
-                      y::Float64)
-  tdx = 1 / 32
-  tdy = 1 / 8
+function make_text(text::AbstractString, x::Float64, y::Float64, 
+                   scale::Float64=1.0)
+  (P, C, U, T, I) = _make_text_data(text, x, y, scale)
+  return RenderObject([RenderData(P, 2, GL_DYNAMIC_DRAW), 
+                       RenderData(C, 3, GL_STATIC_DRAW), 
+                       RenderData(U, 1, GL_STATIC_DRAW), 
+                       RenderData(T, 2, GL_DYNAMIC_DRAW)], 
+                      attributes, I)
+end
 
-  if div(length(obj.render_data[1].data), 
-         obj.render_data[1].dim * 4) == length(s)
-    T = GLfloat[]
-    for c in s
-      tx = rem(Int(c), 32) / 32
-      ty = div(Int(c), 32) / 8
-      texcoord = GLfloat[tx, ty + tdy,
-                         tx, ty,
-                         tx + tdx, ty,
-                         tx + tdx, ty + tdy]
-      append!(T, texcoord)
-    end
-    update_buffer!(obj, T, attributes[4])
-    return obj
-  else
-    println("Making new text")
-    return make_text(s, x, y)
+function update_text!(obj::RenderObject, text::AbstractString, x::Float64, 
+                      y::Float64, scale::Float64=1.0)
+  (P, C, U, T, I) = _make_text_data(text, x, y, scale)
+  if length(I) > div(obj.idx_buffer.size, 4)
+    update_buffer!(obj, C, attributes[2])
+    update_buffer!(obj, U, attributes[3])
   end
+  update_buffer!(obj, P, attributes[1])
+  update_buffer!(obj, T, attributes[4])
+  update_idx!(obj, I)
+
+  return
 end

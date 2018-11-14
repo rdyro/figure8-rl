@@ -59,7 +59,83 @@ function make_road(x::AbstractArray, y::AbstractArray, t::Float64)
     indices[2 * 3 * (i - 1) + 6] = 2 * (i - 1) + 2 - 1
   end
 
-  return RenderObject([RenderData(points, 2), RenderData(color, 3),
-                       RenderData(usetex, 1), RenderData(texcoord, 2)],
-                      attributes, indices, STATIC)
+  return RenderObject([RenderData(points, 2, GL_STATIC_DRAW), 
+                       RenderData(color, 3, GL_STATIC_DRAW),
+                       RenderData(usetex, 1, GL_STATIC_DRAW), 
+                       RenderData(texcoord, 2, GL_STATIC_DRAW)],
+                      attributes, indices)
+end
+
+function make_car()
+  width = 0.1
+  length = 0.25
+
+  flpos = 0.6 * width / 2
+  flw = 0.03
+  fll = 0.03
+
+  blpos = 0.6 * width / 2
+  blw = 0.03
+  bll = 0.03
+  position_data = GLfloat[
+                          # car
+                          -width / 2, -length / 2,
+                          -width / 2, length / 2,
+                          width / 2, length / 2,
+                          width / 2, -length / 2,
+                          # left front light
+                          -flpos - flw / 2, length / 2 - fll / 2,
+                          -flpos - flw / 2, length / 2 + fll / 2,
+                          -flpos + flw / 2, length / 2 + fll / 2,
+                          -flpos + flw / 2, length / 2 - fll / 2,
+                          # right front light
+                          flpos - flw / 2, length / 2 - fll / 2,
+                          flpos - flw / 2, length / 2 + fll / 2,
+                          flpos + flw / 2, length / 2 + fll / 2,
+                          flpos + flw / 2, length / 2 - fll / 2,
+                          # left front light
+                          -blpos - blw / 2, -length / 2 - bll / 2,
+                          -blpos - blw / 2, -length / 2 + bll / 2,
+                          -blpos + blw / 2, -length / 2 + bll / 2,
+                          -blpos + blw / 2, -length / 2 - bll / 2,
+                          # right front light
+                          blpos - blw / 2, -length / 2 - bll / 2,
+                          blpos - blw / 2, -length / 2 + bll / 2,
+                          blpos + blw / 2, -length / 2 + bll / 2,
+                          blpos + blw / 2, -length / 2 - bll / 2
+                         ]
+  position = RenderData(position_data, 2, GL_STATIC_DRAW)
+
+  car_color = GLfloat[0.0, 0.0, 1.0]
+  fl_color = GLfloat[1.0, 1.0, 1.0]
+  bl_color = GLfloat[1.0, 0.0, 0.0]
+  color_data = [repeat(car_color, 4); repeat(fl_color, 8); repeat(bl_color, 8)]
+  color = RenderData(color_data, 3, GL_STATIC_DRAW)
+
+  usetex = RenderData(fill(GLfloat(0), 20), 1, GL_STATIC_DRAW)
+  texcoord = RenderData(fill(GLfloat(0), 2 * 20), 2, GL_STATIC_DRAW)
+
+  idx1 = GLuint[0, 1, 2,
+                0, 2, 3]
+  idx = GLuint[]
+  offset = GLuint(0)
+  for i in 1:5
+    append!(idx, idx1 .+ offset)
+    offset += 4
+  end
+
+  return RenderObject([position, color, usetex, texcoord], attributes, idx)
+end
+
+function car_lights!(car::RenderObject, on::Union{Bool, Nothing}=nothing)
+  @assert car.render_buffers[1].size == 4 * 4 * 2 * 5
+  if on == nothing
+    car.elnb = (car.elnb == 3 * 2 * 3) ? 3 * 2 * 5 : 3 * 2 * 3 # toggle
+  else
+    if on == true
+      car.elnb = 3 * 2 * 5 # turn on
+    else
+      car.elnb = 3 * 2 * 3 # turn off
+    end
+  end
 end
