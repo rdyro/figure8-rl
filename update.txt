@@ -1,0 +1,18 @@
+Planned Approach Timeline
+  - visualization
+  - dynamics
+  - default agent
+  - full state deterministic MDP
+  - limited observation horizon
+  - uncertainty in position, velocity of other agents
+  - uncertainty in position, velocity of self
+  - complex adverserial policies
+
+Strategies
+  - MPC
+  - Kalman-Bucy filter
+  - LQG
+  - RL
+    + MCTS, online methods in general
+    + Alpha vectors
+  - Deep RL (online ML)
