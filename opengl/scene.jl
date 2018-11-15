@@ -62,8 +62,7 @@ function make_road(x::AbstractArray, y::AbstractArray, t::Float64)
   return RenderObject([RenderData(points, 2, GL_STATIC_DRAW), 
                        RenderData(color, 3, GL_STATIC_DRAW),
                        RenderData(usetex, 1, GL_STATIC_DRAW), 
-                       RenderData(texcoord, 2, GL_STATIC_DRAW)],
-                      attributes, indices)
+                       RenderData(texcoord, 2, GL_STATIC_DRAW)], indices)
 end
 
 function make_car()
@@ -124,7 +123,7 @@ function make_car()
     offset += 4
   end
 
-  return RenderObject([position, color, usetex, texcoord], attributes, idx)
+  return RenderObject([position, color, usetex, texcoord], idx)
 end
 
 function car_lights!(car::RenderObject, on::Union{Bool, Nothing}=nothing)
