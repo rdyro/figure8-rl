@@ -1,11 +1,11 @@
-module Visualization
+module Vis
 
 using GLFW
 using ModernGL
 using Serialization
-include("util.jl")
-include("drawing.jl")
-include("scene.jl")
+include("vis_util.jl")
+include("vis_drawing.jl")
+include("vis_scene.jl")
 
 struct Context
   window::GLFW.Window
@@ -50,8 +50,8 @@ function make_context(width, height)
   GLFW.MakeContextCurrent(window)
 
   # Compile the Shader Program
-  vsh = read("shader.vert", String)
-  fsh = read("shader.frag", String)
+  vsh = read("shaders/shader.vert", String)
+  fsh = read("shaders/shader.frag", String)
   program = make_shader_program(vsh, fsh)
   glUseProgram(program)
   make_attributes_global(program)
@@ -241,20 +241,6 @@ function visualize(context::Context, objects::Array{RenderObject})
 
     return false
   end
-
-  #=
-  while run[] && !GLFW.WindowShouldClose(context.window)
-    glClearColor(1.0, 1.0, 1.0, 1.0)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-    for obj in objects
-      render(obj)
-    end
-
-    GLFW.SwapBuffers(context.window)
-    GLFW.PollEvents()
-  end
-  =#
 
   glClearColor(1.0, 1.0, 1.0, 1.0)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)

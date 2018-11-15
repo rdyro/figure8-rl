@@ -1,7 +1,4 @@
 using LinearAlgebra
-using ModernGL
-
-include("drawing.jl")
 
 function make_road(x::AbstractArray, y::AbstractArray, t::Float64)
   @assert length(x) == length(y) > 1

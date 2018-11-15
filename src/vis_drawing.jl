@@ -1,5 +1,3 @@
-using ModernGL
-
 # Rendering Abstraction #######################################################
 mutable struct RenderData
   data::AbstractArray{GLfloat}
