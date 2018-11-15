@@ -36,9 +36,9 @@ function make_road(x::AbstractArray, y::AbstractArray, t::Float64)
     points[2 * 2 * (i - 1) + 3] = x[i] - dpx[i] * t
     points[2 * 2 * (i - 1) + 4] = y[i] - dpy[i] * t
 
-    color[2 * 3 * (i - 1) + 1] = 0.0
-    color[2 * 3 * (i - 1) + 2] = 0.0
-    color[2 * 3 * (i - 1) + 3] = 0.0
+    color[2 * 3 * (i - 1) + 1] = 0.15
+    color[2 * 3 * (i - 1) + 2] = 0.15
+    color[2 * 3 * (i - 1) + 3] = 0.15
 
     color[2 * 3 * (i - 1) + 4] = color[2 * 3 * (i - 1) + 1]
     color[2 * 3 * (i - 1) + 5] = color[2 * 3 * (i - 1) + 2]
@@ -102,7 +102,7 @@ function make_car()
                          ]
   position = RenderData(position_data, 2, GL_STATIC_DRAW)
 
-  car_color = GLfloat[0.0, 0.0, 1.0]
+  car_color = GLfloat[0.12, 0.56, 1.0] # dodger blue
   fl_color = GLfloat[1.0, 1.0, 1.0]
   bl_color = GLfloat[1.0, 0.0, 0.0]
   color_data = [repeat(car_color, 4); repeat(fl_color, 8); repeat(bl_color, 8)]

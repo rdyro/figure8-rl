@@ -242,7 +242,7 @@ function visualize(context::Context, objects::Array{RenderObject})
     return false
   end
 
-  glClearColor(1.0, 1.0, 1.0, 1.0)
+  glClearColor(0.3, 0.7, 0.0, 1.0)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
   for obj in objects
