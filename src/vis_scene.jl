@@ -1,6 +1,7 @@
 using LinearAlgebra
 
-function make_road(x::AbstractArray, y::AbstractArray, t::Float64)
+function make_road(context::Context, x::AbstractArray, y::AbstractArray, 
+                   t::Float64)
   @assert length(x) == length(y) > 1
   len = length(x)
 
@@ -56,13 +57,16 @@ function make_road(x::AbstractArray, y::AbstractArray, t::Float64)
     indices[2 * 3 * (i - 1) + 6] = 2 * (i - 1) + 2 - 1
   end
 
-  return RenderObject([RenderData(points, 2, GL_STATIC_DRAW), 
-                       RenderData(color, 3, GL_STATIC_DRAW),
-                       RenderData(usetex, 1, GL_STATIC_DRAW), 
-                       RenderData(texcoord, 2, GL_STATIC_DRAW)], indices)
+  return RenderObject(context, [RenderData(points, 2, GL_STATIC_DRAW), 
+                                RenderData(color, 3, GL_STATIC_DRAW),
+                                RenderData(usetex, 1, GL_STATIC_DRAW), 
+                                RenderData(texcoord, 2, GL_STATIC_DRAW)], 
+                      indices)
 end
 
-function make_car()
+# dodger blue
+function make_car(context::Context, 
+                  car_color::Array{<: Number, 1}=GLfloat[0.12, 0.56, 1.0])
   width = 0.1
   length = 0.25
 
@@ -102,10 +106,10 @@ function make_car()
                          ]
   position = RenderData(position_data, 2, GL_STATIC_DRAW)
 
-  car_color = GLfloat[0.12, 0.56, 1.0] # dodger blue
   fl_color = GLfloat[1.0, 1.0, 1.0]
   bl_color = GLfloat[1.0, 0.0, 0.0]
-  color_data = [repeat(car_color, 4); repeat(fl_color, 8); repeat(bl_color, 8)]
+  color_data = [repeat(Array{GLfloat}(car_color), 4); 
+                repeat(fl_color, 8); repeat(bl_color, 8)]
   color = RenderData(color_data, 3, GL_STATIC_DRAW)
 
   usetex = RenderData(fill(GLfloat(0), 20), 1, GL_STATIC_DRAW)
@@ -120,7 +124,7 @@ function make_car()
     offset += 4
   end
 
-  return RenderObject([position, color, usetex, texcoord], idx)
+  return RenderObject(context, [position, color, usetex, texcoord], idx)
 end
 
 function car_lights!(car::RenderObject, on::Union{Bool, Nothing}=nothing)

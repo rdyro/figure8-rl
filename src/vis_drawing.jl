@@ -12,6 +12,7 @@ struct RenderBuffer
 end
 
 mutable struct RenderObject
+  context::Context
   vertex_array::GLuint
   render_buffers::AbstractArray{RenderBuffer}
   elnb::Int
@@ -20,7 +21,7 @@ mutable struct RenderObject
   render_lock::Threads.SpinLock
 end
 
-function RenderObject(render_data::AbstractArray{RenderData},
+function RenderObject(context::Context, render_data::AbstractArray{RenderData},
                       idxXORelnb::Union{AbstractArray{GLuint}, Int})
   # save the configuration in the vertex array
   vertex_array = glGenVertexArray()
@@ -36,9 +37,9 @@ function RenderObject(render_data::AbstractArray{RenderData},
     # usage is GL_STATIC_DRAW or GL_DYNAMIC_DRAW
     glBufferData(GL_ARRAY_BUFFER, render_buffers[i].size, 
                  render_data[i].data, render_buffers[i].usage)
-    glVertexAttribPointer(ATTRIBUTES[i], render_data[i].dim, GL_FLOAT, false, 
-                          0, C_NULL)
-    glEnableVertexAttribArray(ATTRIBUTES[i])
+    glVertexAttribPointer(context.attributes[i], render_data[i].dim, 
+                          GL_FLOAT, false, 0, C_NULL)
+    glEnableVertexAttribArray(context.attributes[i])
   end
 
   # allocate the index buffer for drawing normal objects
@@ -58,14 +59,14 @@ function RenderObject(render_data::AbstractArray{RenderData},
   # finish saving the configuration
   glBindVertexArray(0)
 
-  return RenderObject(vertex_array, render_buffers, elnb, idx_buffer, 
+  return RenderObject(context, vertex_array, render_buffers, elnb, idx_buffer, 
                       identity_mat(), Threads.SpinLock())
 end
 
 function render(obj::RenderObject)
   lock(obj.render_lock)
 
-  glUniformMatrix4fv(Tmat_LOCATION[], 1, GL_FALSE, obj.T)
+  glUniformMatrix4fv(obj.context.Tmat_location[], 1, GL_FALSE, obj.T)
 
   glBindVertexArray(obj.vertex_array)
   if obj.idx_buffer != nothing
@@ -84,7 +85,7 @@ function update_buffer!(obj::RenderObject, data::Array{GLfloat},
                         attribute::GLint)
   lock(obj.render_lock)
 
-  attr_idx = findfirst(x -> x == attribute, ATTRIBUTES)
+  attr_idx = findfirst(x -> x == attribute, obj.context.attributes)
   if sizeof(data) <= obj.render_buffers[attr_idx].size
     glBindBuffer(GL_ARRAY_BUFFER, obj.render_buffers[attr_idx].id)
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(data), data)
@@ -101,7 +102,7 @@ function update_buffer!(obj::RenderObject, data::Array{GLfloat},
     glBufferData(GL_ARRAY_BUFFER, obj.render_buffers[attr_idx].size, data, 
                  obj.render_buffers[attr_idx].usage)
   end
-  
+
   unlock(obj.render_lock)
 end
 
@@ -169,8 +170,8 @@ function identity_mat()
 end
 
 # Line Drawing ################################################################
-function make_line(x1::Float64, y1::Float64, x2::Float64, y2::Float64,
-                   color::AbstractArray{Float64})
+function make_line(context::Context, x1::Float64, y1::Float64, 
+                   x2::Float64, y2::Float64, color::AbstractArray{Float64})
   @assert length(color) == 3
 
   position = RenderData(GLfloat[x1, y1, x2, y2], 2, GL_DYNAMIC_DRAW)
@@ -178,7 +179,7 @@ function make_line(x1::Float64, y1::Float64, x2::Float64, y2::Float64,
   usetex = RenderData(fill(GLfloat(0), 2), 1, GL_STATIC_DRAW)
   texcoord = RenderData(fill(GLfloat(0), 4), 2, GL_DYNAMIC_DRAW)
   elnb = 4
-  return RenderObject([position, color, usetex, texcoord], elnb)
+  return RenderObject(context, [position, color, usetex, texcoord], elnb)
 end
 
 # Text Drawing ################################################################
@@ -237,24 +238,24 @@ function _make_text_data(text::AbstractString, x::Float64, y::Float64,
   return (P, C, U, T, I)
 end
 
-function make_text(text::AbstractString, x::Float64, y::Float64, 
-                   scale::Float64=1.0)
+function make_text(context::Context, text::AbstractString, x::Float64, 
+                   y::Float64, scale::Float64=1.0)
   (P, C, U, T, I) = _make_text_data(text, x, y, scale)
-  return RenderObject([RenderData(P, 2, GL_DYNAMIC_DRAW), 
-                       RenderData(C, 3, GL_STATIC_DRAW), 
-                       RenderData(U, 1, GL_STATIC_DRAW), 
-                       RenderData(T, 2, GL_DYNAMIC_DRAW)], I)
+  return RenderObject(context, [RenderData(P, 2, GL_DYNAMIC_DRAW), 
+                                RenderData(C, 3, GL_STATIC_DRAW), 
+                                RenderData(U, 1, GL_STATIC_DRAW), 
+                                RenderData(T, 2, GL_DYNAMIC_DRAW)], I)
 end
 
 function update_text!(obj::RenderObject, text::AbstractString, x::Float64, 
                       y::Float64, scale::Float64=1.0)
   (P, C, U, T, I) = _make_text_data(text, x, y, scale)
   if length(I) > div(obj.idx_buffer.size, 4)
-    update_buffer!(obj, C, ATTRIBUTES[2])
-    update_buffer!(obj, U, ATTRIBUTES[3])
+    update_buffer!(obj, C, obj.context.attributes[2])
+    update_buffer!(obj, U, obj.context.attributes[3])
   end
-  update_buffer!(obj, P, ATTRIBUTES[1])
-  update_buffer!(obj, T, ATTRIBUTES[4])
+  update_buffer!(obj, P, obj.context.attributes[1])
+  update_buffer!(obj, T, obj.context.attributes[4])
   update_idx!(obj, I)
 
   return
