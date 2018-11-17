@@ -140,13 +140,11 @@ function car_lights!(car::RenderObject, on::Union{Bool, Nothing}=nothing)
   end
 end
 
-function make_vector(context::Context, x1::Float64, y1::Float64, 
-                     x2::Float64, y2::Float64,
+# Vectors #####################################################################
+function make_vector_thr(context::Context, x::Float64, y::Float64, 
+                     th::Float64, r::Float64,
                      color::AbstractArray{<: Real}=GLfloat[1.0, 0.0, 0.0])
-  dx = x2 - x1
-  dy = y2 - y1
-  r = sqrt(dx^2 + dy^2)
-  th = atan(dy, dx) - pi / 2
+  th = th - pi / 2
 
   arrow_r = 0.015
   points = GLfloat[0, 0,
@@ -159,8 +157,8 @@ function make_vector(context::Context, x1::Float64, y1::Float64,
           sin(th) cos(th)]
   for i in 1:2:length(points)
     points[i:i+1] = rotM * points[i:i+1]
-    points[i] += x1
-    points[i+1] += y1
+    points[i] += x
+    points[i+1] += y
   end
   color = repeat(Array{GLfloat}(color), 6)
 
@@ -173,13 +171,20 @@ function make_vector(context::Context, x1::Float64, y1::Float64,
                                 RenderData(texcoord, 2, GL_STATIC_DRAW)], 6)
 end
 
-function update_vector!(context::Context, v::RenderObject, 
-                        x1::Float64, y1::Float64, x2::Float64, y2::Float64,
-                        color::AbstractArray{<: Real}=GLfloat[1.0, 0.0, 0.0])
+function make_vector_xy(context::Context, x1::Float64, y1::Float64, 
+                     x2::Float64, y2::Float64,
+                     color::AbstractArray{<: Real}=GLfloat[1.0, 0.0, 0.0])
   dx = x2 - x1
   dy = y2 - y1
+  th = atan(dy, dx)
   r = sqrt(dx^2 + dy^2)
-  th = atan(dy, dx) - pi / 2
+
+  return make_vector_thr(context, x1, y1, th, r)
+end
+
+function update_vector_thr!(context::Context, v::RenderObject, 
+                            x::Float64, y::Float64, th::Float64, r::Float64)
+  th = th - pi / 2
 
   arrow_r = 0.015
   points = GLfloat[0, 0,
@@ -192,9 +197,19 @@ function update_vector!(context::Context, v::RenderObject,
           sin(th) cos(th)]
   for i in 1:2:length(points)
     points[i:i+1] = rotM * points[i:i+1]
-    points[i] += x1
-    points[i+1] += y1
+    points[i] += x
+    points[i+1] += y
   end
 
   update_buffer!(v, points, context.attributes[1])
+end
+
+function update_vector_xy!(context::Context, v::RenderObject, 
+                           x1::Float64, y1::Float64, x2::Float64, y2::Float64)
+  dx = x2 - x1
+  dy = y2 - y1
+  r = sqrt(dx^2 + dy^2)
+  th = atan(dy, dx)
+
+  update_vector_thr!(context, v, x, y, th, r)
 end

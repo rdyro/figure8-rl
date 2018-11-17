@@ -161,7 +161,7 @@ function test()
   s1 = make_text(context, string(time_ns()), 0.0, 0.0)
 
   # vector
-  vec1 = make_vector(context, 0.2, -0.2, 0.5, 0.5)
+  vec1 = make_vector_xy(context, 0.2, -0.2, 0.5, 0.5)
 
   # car
   car1 = make_car(context)
