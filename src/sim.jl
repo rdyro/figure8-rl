@@ -1,6 +1,8 @@
 using LinearAlgebra
+push!(LOAD_PATH, pwd() * "/vis")
+using vis
 
-include("vis.jl")
+#include("vis.jl")
 include("rk4.jl")
 include("sim_figure8.jl")
 include("sim_types.jl")
@@ -15,8 +17,8 @@ function update_renderer(agent::Agent, world::World)
   (sx, sy) = sp2sxsy(agent.x[1], agent.x[3], world.road.path)
   th = atan(sy, sx) - pi / 2
 
-  agent.car.T = (Vis.scale_mat(world.vis_scaling, world.vis_scaling) * 
-                 Vis.translate_mat(x, y) * Vis.rotate_mat(th))
+  agent.car.T = (vis.scale_mat(world.vis_scaling, world.vis_scaling) * 
+                 vis.translate_mat(x, y) * vis.rotate_mat(th))
   return
 end
 
@@ -142,7 +144,7 @@ end
 # Main Routine ################################################################
 function main()
   # load the graphical context (OpenGL handle, the graphical window, etc.)
-  context = Vis.setup()
+  context = vis.setup()
 
   vis_scaling = 0.01
 
@@ -150,18 +152,18 @@ function main()
   path = make_figure8_path()
   road_width = 10.0
   road = Road(path, road_width, 
-              Vis.make_road(context, path.X, path.Y, road_width))
-  road.road.T = Vis.scale_mat(vis_scaling, vis_scaling)
+              vis.make_road(context, path.X, path.Y, road_width))
+  road.road.T = vis.scale_mat(vis_scaling, vis_scaling)
 
   # make the agents
-  agent1 = Agent(1, [0.0; 60 / 3.6; 0], Vis.make_car(context))
-  Vis.car_lights!(agent1.car, false)
+  agent1 = Agent(1, [0.0; 60 / 3.6; 0], vis.make_car(context))
+  vis.car_lights!(agent1.car, false)
 
-  agent2 = Agent(1, [0.0; 60 / 3.6; 3], Vis.make_car(context, [1.0, 1.0, 0.0]))
-  Vis.car_lights!(agent2.car, false)
+  agent2 = Agent(1, [0.0; 60 / 3.6; 3], vis.make_car(context, [1.0, 1.0, 0.0]))
+  vis.car_lights!(agent2.car, false)
 
-  agent3 = Agent(1, [0.0; 60 / 3.6; -3], Vis.make_car(context, [1.0, 0.0, 1.0]))
-  Vis.car_lights!(agent3.car, false)
+  agent3 = Agent(1, [0.0; 60 / 3.6; -3], vis.make_car(context, [1.0, 0.0, 1.0]))
+  vis.car_lights!(agent3.car, false)
 
   # make the world
   world = World(road, [agent1, agent2, agent3], vis_scaling)
@@ -173,7 +175,7 @@ function main()
   while window
     t = (time_ns() - t0) / 1e9
 
-    to_visualize = Vis.RenderObject[]
+    to_visualize = vis.RenderObject[]
     if world.road.road != nothing
       push!(to_visualize, world.road.road)
     end
@@ -186,7 +188,7 @@ function main()
       end
     end
 
-    window = Vis.visualize(context, to_visualize)
+    window = vis.visualize(context, to_visualize)
 
     oldt = t
   end
