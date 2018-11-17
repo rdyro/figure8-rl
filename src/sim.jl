@@ -3,47 +3,7 @@ using LinearAlgebra
 include("vis.jl")
 include("rk4.jl")
 include("sim_figure8.jl")
-
-# Type Definitions ############################################################
-struct Path
-  X::Array{Float64}
-  Y::Array{Float64}
-  dX::Array{Float64}
-  dY::Array{Float64}
-  ddX::Array{Float64}
-  ddY::Array{Float64}
-  Sx::Array{Float64}
-  Sy::Array{Float64}
-  Px::Array{Float64}
-  Py::Array{Float64}
-  R::Array{Float64}
-  S::Array{Float64}
-end
-
-struct Road
-  path::Path
-  width::Float64
-  road::Union{Vis.RenderObject, Nothing}
-end
-Road(path, width) = Road(path, width, nothing)
-
-mutable struct Agent
-  id::Int
-  x::Array{Float64, 1}
-  dynamics!::Function
-  controller!::Function
-  car::Union{Vis.RenderObject, Nothing}
-end
-Agent(id, x) = Agent(id, x, default_dynamics!, default_controller!, nothing)
-Agent(id, x, car::Vis.RenderObject) = Agent(id, x, default_dynamics!, 
-                                            default_controller!, car)
-
-struct World
-  road::Road
-  agents::Array{Agent, 1}
-  vis_scaling::Float64
-end
-World(road::Road) = World(road, Agent[])
+include("sim_types.jl")
 
 # Custom Rendering ############################################################
 function update_renderer(agent::Agent, world::World)
@@ -66,7 +26,7 @@ function default_controller!(u::AbstractArray{Float64},
                              dx::AbstractArray{Float64}, 
                              agent_world::Pair{Agent, World}, t::Float64)
   u[1] = 0 # no braking nor accelerating
-  u[2] = -dx[3] # counteract lateral movement
+  #u[2] = -dx[3] # counteract lateral movement
 
   return
 end
@@ -94,7 +54,7 @@ function default_dynamics!(dx, x, agent_world, t)
   # compute rates
   ds *= isnan(r / (r - p)) ? 1 : r / (r - p)
   dds = 0.0
-  dp = isnan(ds^2 / r) ? 0.0 : 1e-2 * -ds^2 / r
+  dp = isnan(ds^2 / r) ? 0.0 : 1e-1 * -ds^2 / r
 
   dx[1] = ds
   dx[2] = dds
