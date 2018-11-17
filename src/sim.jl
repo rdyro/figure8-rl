@@ -17,6 +17,8 @@ function update_renderer(agent::Agent, world::World)
   (sx, sy) = sp2sxsy(agent.x[1], agent.x[3], world.road.path)
   th = atan(sy, sx) - pi / 2
 
+  vis.car_lights!(agent.car, agent.is_braking)
+
   agent.car.T = (vis.scale_mat(world.vis_scaling, world.vis_scaling) * 
                  vis.translate_mat(x, y) * vis.rotate_mat(th))
   return
@@ -27,8 +29,8 @@ function default_controller!(u::AbstractArray{Float64},
                              x::AbstractArray{Float64}, 
                              dx::AbstractArray{Float64}, 
                              agent_world::Pair{Agent, World}, t::Float64)
-  u[1] = 0 # no braking nor accelerating
-  #u[2] = -dx[3] # counteract lateral movement
+  u[1] = -0.1 * (x[2] - 120 / 3.6) # no braking nor accelerating
+  u[2] = -0.01 * x[3] # counteract lateral movement
 
   return
 end
@@ -45,7 +47,7 @@ function default_dynamics!(dx, x, agent_world, t)
   # get local interpolated path curvature
   path = world.road.path
 
-  s = rem(s, path.S[end])
+  s = mod(s, path.S[end])
   idx = binary_search(path.S, s)
   R = path.R[idx]
   R1 = path.R[idx + 1]
@@ -56,6 +58,7 @@ function default_dynamics!(dx, x, agent_world, t)
   # compute rates
   ds *= isnan(r / (r - p)) ? 1 : r / (r - p)
   dds = 0.0
+  dds += abs(p) > world.road.width ? -ds : 0.0
   dp = isnan(ds^2 / r) ? 0.0 : 1e-1 * -ds^2 / r
 
   dx[1] = ds
@@ -66,7 +69,9 @@ function default_dynamics!(dx, x, agent_world, t)
   u = fill(0.0, 2)
   agent.controller!(u, x, dx, agent_world, t)
 
-  dx[1] += u[1]
+  agent.is_braking = ds * u[1] < 0
+
+  dx[2] += u[1]
   dx[3] += u[2]
 
   # done
@@ -75,7 +80,7 @@ end
 
 # Utility Functions ###########################################################
 function sp2xy(s::Float64, p::Float64, path)
-  s = rem(s, path.S[end])
+  s = mod(s, path.S[end])
   idx = binary_search(path.S, s)
 
   X = path.X[idx]
@@ -103,7 +108,7 @@ function sp2xy(s::Float64, p::Float64, path)
 end
 
 function sp2sxsy(s::Float64, p::Float64, path)
-  s = rem(s, path.S[end])
+  s = mod(s, path.S[end])
   idx = binary_search(path.S, s)
 
   dX = path.dX[idx]
@@ -156,10 +161,10 @@ function main()
   road.road.T = vis.scale_mat(vis_scaling, vis_scaling)
 
   # make the agents
-  agent1 = Agent(1, [0.0; 60 / 3.6; 0], vis.make_car(context))
+  agent1 = Agent(1, [0.0; 120 / 3.6; 0], vis.make_car(context))
   vis.car_lights!(agent1.car, false)
 
-  agent2 = Agent(1, [0.0; 60 / 3.6; 3], vis.make_car(context, [1.0, 1.0, 0.0]))
+  agent2 = Agent(1, [0.0; 120 / 3.6; 3], vis.make_car(context, [1.0, 1.0, 0.0]))
   vis.car_lights!(agent2.car, false)
 
   agent3 = Agent(1, [0.0; 60 / 3.6; -3], vis.make_car(context, [1.0, 0.0, 1.0]))

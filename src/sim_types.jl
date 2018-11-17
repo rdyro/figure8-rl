@@ -18,20 +18,22 @@ struct Road
   path::Path
   width::Float64
   road::Union{vis.RenderObject, Nothing}
-
-  Road(path, width, road) = new(path, width, road)
-  Road(path, width) = new(path, width, nothing)
 end
+Road(path, width, road) = Road(path, width, road)
+Road(path, width) = Road(path, width, nothing)
 
 mutable struct Agent
   id::Int
   x::Array{Float64, 1}
   dynamics!::Function
   controller!::Function
+  is_braking::Bool
   car::Union{vis.RenderObject, Nothing}
 end
-Agent(id, x) = Agent(id, x, default_dynamics!, default_controller!, nothing)
-Agent(id, x, car) = Agent(id, x, default_dynamics!, default_controller!, car)
+Agent(id, x) = Agent(id, x, default_dynamics!, default_controller!, false, 
+                     nothing)
+Agent(id, x, car) = Agent(id, x, default_dynamics!, default_controller!, false, 
+                          car)
 
 struct World
   road::Road
