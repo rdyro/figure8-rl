@@ -171,14 +171,14 @@ end
 
 # Line Drawing ################################################################
 function make_line(context::Context, x1::Float64, y1::Float64, 
-                   x2::Float64, y2::Float64, color::AbstractArray{Float64})
+                   x2::Float64, y2::Float64, color::AbstractArray{<: Real})
   @assert length(color) == 3
 
   position = RenderData(GLfloat[x1, y1, x2, y2], 2, GL_DYNAMIC_DRAW)
   color = RenderData(Array{GLfloat}(repeat(color, 2)), 3, GL_STATIC_DRAW)
   usetex = RenderData(fill(GLfloat(0), 2), 1, GL_STATIC_DRAW)
   texcoord = RenderData(fill(GLfloat(0), 4), 2, GL_DYNAMIC_DRAW)
-  elnb = 4
+  elnb = 2
   return RenderObject(context, [position, color, usetex, texcoord], elnb)
 end
 

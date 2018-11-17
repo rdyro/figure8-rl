@@ -160,11 +160,16 @@ function test()
   l1 = make_line(context, 0.0, 0.0, 0.5, -0.5, color)
   s1 = make_text(context, string(time_ns()), 0.0, 0.0)
 
+  # vector
+  vec1 = make_vector(context, 0.2, -0.2, 0.5, 0.5)
+
+  # car
+  car1 = make_car(context)
+  car1.T = scale_mat(0.01, 0.01)
+
   # Main Render Loop ----------------------------------------------------------
   k = 0
   text = ""
-
-  car1 = make_car(context)
 
   println("Set run to false")
   t0 = time_ns() / 1e9
@@ -172,8 +177,8 @@ function test()
 
   k = 0
   t = 0
-  while window_status && time_ns() / 1e9 - t0 < 10.0
-    println(1e3 * (time_ns() / 1e9 - t))
+  while window_status
+    #println(1e3 * (time_ns() / 1e9 - t))
     t = time_ns() / 1e9
     points = GLfloat[0.0, 0.0, cos(t), sin(t)]
     update_buffer!(l1, points, context.attributes[1])
@@ -184,52 +189,17 @@ function test()
       k = 0
     end
     update_text!(s1, string(time_ns()), 0.0, 0.0)
-    car1.T = translate_mat(0, (t - t0) * 0.1)
+    car1.T = scale_mat(0.01, 0.01) * translate_mat(0, (t - t0) * 0.1)
 
     k += 1
 
     window_status = visualize(context, [object2, object3, object4, l1, 
-                                        s1, car1])
+                                        s1, car1, vec1])
   end
 
   if window_status == true
     GLFW.DestroyWindow(context.window)
   end
-
-  #=
-  while !GLFW.WindowShouldClose(context.window)
-    glClearColor(1.0, 1.0, 1.0, 1.0)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-    render(object2)
-    render(object3)
-    render(object4)
-
-    t = time_ns() / 1e9
-    points = GLfloat[0.0, 0.0, cos(t), sin(t)]
-    update_buffer!(l1, points, context.attributes[1])
-    render(l1)
-
-    if k == 60
-      #text = string(rand(1:100))
-      #update_text!(s1, text, 0.0, 0.0)
-      car_lights!(car1)
-      k = 0
-    end
-    update_text!(s1, string(time_ns()), 0.0, 0.0)
-    render(s1)
-
-    car1.T = translate_mat(0, (t - t0) * 0.1)
-    render(car1)
-
-    k += 1
-
-    GLFW.SwapBuffers(context.window)
-    GLFW.PollEvents()
-  end
-  =#
-
-  # ---------------------------------------------------------------------------
 
   return
 end

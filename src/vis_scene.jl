@@ -139,3 +139,62 @@ function car_lights!(car::RenderObject, on::Union{Bool, Nothing}=nothing)
     end
   end
 end
+
+function make_vector(context::Context, x1::Float64, y1::Float64, 
+                     x2::Float64, y2::Float64,
+                     color::AbstractArray{<: Real}=GLfloat[1.0, 0.0, 0.0])
+  dx = x2 - x1
+  dy = y2 - y1
+  r = sqrt(dx^2 + dy^2)
+  th = atan(dy, dx) - pi / 2
+
+  arrow_r = 0.015
+  points = GLfloat[0, 0,
+                   0, r,
+                   -arrow_r, r - arrow_r * 2,
+                   0, r,
+                   arrow_r, r - arrow_r * 2,
+                   0, r]
+  rotM = [cos(th) -sin(th);
+          sin(th) cos(th)]
+  for i in 1:2:length(points)
+    points[i:i+1] = rotM * points[i:i+1]
+    points[i] += x1
+    points[i+1] += y1
+  end
+  color = repeat(Array{GLfloat}(color), 6)
+
+  usetex = fill(GLfloat(0), 6)
+  texcoord = fill(GLfloat(0), 2 * 6)
+
+  return RenderObject(context, [RenderData(points, 2, GL_DYNAMIC_DRAW), 
+                                RenderData(color, 3, GL_STATIC_DRAW), 
+                                RenderData(usetex, 1, GL_STATIC_DRAW), 
+                                RenderData(texcoord, 2, GL_STATIC_DRAW)], 6)
+end
+
+function update_vector!(context::Context, v::RenderObject, 
+                        x1::Float64, y1::Float64, x2::Float64, y2::Float64,
+                        color::AbstractArray{<: Real}=GLfloat[1.0, 0.0, 0.0])
+  dx = x2 - x1
+  dy = y2 - y1
+  r = sqrt(dx^2 + dy^2)
+  th = atan(dy, dx) - pi / 2
+
+  arrow_r = 0.015
+  points = GLfloat[0, 0,
+                   0, r,
+                   -arrow_r, r - arrow_r * 2,
+                   0, r,
+                   arrow_r, r - arrow_r * 2,
+                   0, r]
+  rotM = [cos(th) -sin(th);
+          sin(th) cos(th)]
+  for i in 1:2:length(points)
+    points[i:i+1] = rotM * points[i:i+1]
+    points[i] += x1
+    points[i+1] += y1
+  end
+
+  update_buffer!(v, points, context.attributes[1])
+end
