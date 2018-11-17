@@ -1,7 +1,7 @@
 using LinearAlgebra
 
 function make_road(context::Context, x::AbstractArray, y::AbstractArray, 
-                   t::Float64)
+                   t::Number)
   @assert length(x) == length(y) > 1
   len = length(x)
 
@@ -67,16 +67,16 @@ end
 # dodger blue
 function make_car(context::Context, 
                   car_color::Array{<: Number, 1}=GLfloat[0.12, 0.56, 1.0])
-  width = 0.1
-  length = 0.25
+  width = 1.7
+  length = 4.5
 
   flpos = 0.6 * width / 2
-  flw = 0.03
-  fll = 0.03
+  flw = 0.3 * width
+  fll = 0.3 * width
 
   blpos = 0.6 * width / 2
-  blw = 0.03
-  bll = 0.03
+  blw = 0.3 * width
+  bll = 0.3 * width
   position_data = GLfloat[
                           # car
                           -width / 2, -length / 2,

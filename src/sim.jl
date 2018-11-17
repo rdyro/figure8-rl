@@ -2,6 +2,7 @@ using LinearAlgebra
 
 include("vis.jl")
 include("rk4.jl")
+include("sim_figure8.jl")
 
 # Type Definitions ############################################################
 struct Path
@@ -40,21 +41,22 @@ Agent(id, x, car::Vis.RenderObject) = Agent(id, x, default_dynamics!,
 struct World
   road::Road
   agents::Array{Agent, 1}
+  vis_scaling::Float64
 end
 World(road::Road) = World(road, Agent[])
 
 # Custom Rendering ############################################################
-function update_renderer(agent::Agent, road::Road)
+function update_renderer(agent::Agent, world::World)
   if agent.car == nothing
     return
   end
 
-  (x, y) = sp2xy(agent.x[1], agent.x[3], road.path)
-  (sx, sy) = sp2sxsy(agent.x[1], agent.x[3], road.path)
+  (x, y) = sp2xy(agent.x[1], agent.x[3], world.road.path)
+  (sx, sy) = sp2sxsy(agent.x[1], agent.x[3], world.road.path)
   th = atan(sy, sx) - pi / 2
 
-  agent.car.T = (Vis.translate_mat(x, y) * Vis.rotate_mat(th) * 
-                 Vis.scale_mat(0.3, 0.3))
+  agent.car.T = (Vis.scale_mat(world.vis_scaling, world.vis_scaling) * 
+                 Vis.translate_mat(x, y) * Vis.rotate_mat(th))
   return
 end
 
@@ -177,137 +179,32 @@ function binary_search(sorted_x::Array{T}, el::T) where T
   return m
 end
 
-function make_figure8_path()
-  X = Float64[]
-  Y = Float64[]
-  N = 100
-
-  y = collect(range(0.0, stop=0.5, length=N))
-  x = fill(0.0, length(y))
-  append!(X, x)
-  append!(Y, y)
-
-  th = range(0.0, stop=(3/2 * pi), length=(3 * N))
-  y = similar(th)
-  x = similar(th)
-  for i in 1:length(th)
-    x[i] = 0.5 * cos(th[i]) - 0.5
-    y[i] = 0.5 * sin(th[i]) + 0.5
-  end
-  append!(X, x)
-  append!(Y, y)
-
-  x = collect(range(-0.5, stop=0.5, length=(2 * N)))
-  y = fill(0.0, length(x))
-  append!(X, x)
-  append!(Y, y)
-
-  th = range(pi / 2, stop=(-pi), length=(3 * N))
-  y = similar(th)
-  x = similar(th)
-  for i in 1:length(th)
-    x[i] = 0.5 * cos(th[i]) + 0.5
-    y[i] = 0.5 * sin(th[i]) - 0.5
-  end
-  append!(X, x)
-  append!(Y, y)
-
-  y = collect(range(-0.5, stop=0.0, length=N))
-  x = fill(0.0, length(y))
-  append!(X, x)
-  append!(Y, y)
-
-  remove_duplicates(X, Y)
-
-  # compute the first derivative and normalized
-  dX = similar(X)
-  dY = similar(Y)
-
-  for i = 1:length(X)-1
-    dX[i] = X[i + 1] - X[i]
-    dY[i] = Y[i + 1] - Y[i]
-  end
-  dX[end] = X[end] - X[end-1]
-  dY[end] = Y[end] - Y[end-1]
-
-  # second derivative
-  ddX = similar(dX)
-  ddY = similar(dY)
-  for i = 1:length(X)-1
-    ddX[i] = dX[i + 1] - dX[i]
-    ddY[i] = dY[i + 1] - dY[i]
-  end
-  ddX[end] = X[end] - X[end-1]
-  ddY[end] = Y[end] - Y[end-1]
-
-  Sx = similar(X)
-  Sy = similar(X)
-  Px = similar(X)
-  Py = similar(X)
-  for i in 1:length(X)
-    len = sqrt(dX[i]^2 + dY[i]^2)
-    Sx[i] = dX[i] / len
-    Sy[i] = dY[i] / len
-
-    Px[i] = -Sy[i]
-    Py[i] = Sx[i]
-  end
-
-  # path and curvature
-  olds = 0.0
-  S = similar(X)
-  R = similar(X)
-  for i = 1:length(X)
-    dr = [dX[i]; dY[i]]
-    ddr = [ddX[i]; ddY[i]]
-
-    k = cross([dr; 0], [ddr; 0])[3] / norm(dr, 2)^3
-    R[i] = (abs(k) < 1e-3) ? Inf : 1 / k
-    S[i] = olds + norm(dr, 2)
-    olds = S[i]
-  end
-
-  return Path(X, Y, dX, dY, ddX, ddY, Sx, Sy, Px, Py, R, S)
-end
-
-function remove_duplicates(x::Array{Float64}, y::Array{Float64})
-  @assert length(x) == length(y)
-  len = length(x)
-  i = 1
-  while i < len
-    if x[i] == x[i + 1] && y[i] == y[i + 1]
-      deleteat!(x, i)
-      deleteat!(y, i)
-
-      len = length(x)
-    end
-    i += 1
-  end
-end
-
 # Main Routine ################################################################
 function main()
   # load the graphical context (OpenGL handle, the graphical window, etc.)
   context = Vis.setup()
 
+  vis_scaling = 0.01
+
   # make the road
   path = make_figure8_path()
-  road_width = 0.1
+  road_width = 10.0
   road = Road(path, road_width, 
               Vis.make_road(context, path.X, path.Y, road_width))
+  road.road.T = Vis.scale_mat(vis_scaling, vis_scaling)
 
   # make the agents
-  agent1 = Agent(1, [0.0; 1; 0], Vis.make_car(context))
+  agent1 = Agent(1, [0.0; 60 / 3.6; 0], Vis.make_car(context))
   Vis.car_lights!(agent1.car, false)
 
-  agent2 = Agent(1, [0.0; 1; 0.05], Vis.make_car(context, [1.0, 1.0, 0.0]))
+  agent2 = Agent(1, [0.0; 60 / 3.6; 3], Vis.make_car(context, [1.0, 1.0, 0.0]))
   Vis.car_lights!(agent2.car, false)
 
-  agent3 = Agent(1, [0.0; 1; -0.05], Vis.make_car(context, [1.0, 0.0, 1.0]))
+  agent3 = Agent(1, [0.0; 60 / 3.6; -3], Vis.make_car(context, [1.0, 0.0, 1.0]))
   Vis.car_lights!(agent3.car, false)
 
   # make the world
-  world = World(road, [agent1, agent2, agent3])
+  world = World(road, [agent1, agent2, agent3], vis_scaling)
 
   window = true
   h = 1e-2
@@ -323,7 +220,7 @@ function main()
 
     for agent in world.agents
       rk4!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
-      update_renderer(agent, world.road)
+      update_renderer(agent, world)
       if agent.car != nothing
         push!(to_visualize, agent.car)
       end
