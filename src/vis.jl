@@ -3,28 +3,19 @@ module Vis
 using GLFW
 using ModernGL
 using Serialization
-include("vis_util.jl")
-include("vis_drawing.jl")
-include("vis_scene.jl")
 
 struct Context
   window::GLFW.Window
   program::GLuint
   width::Int
   height::Int
+  attributes::Array{GLint}
+  Tmat_location::GLint
 end
 
-global const ATTRIBUTES = Array{GLint}(undef, 4)
-global const Tmat_LOCATION = Array{GLint}(undef, 1)
-function make_attributes_global(program)
-  positionAttribute = glGetAttribLocation(program, "position")
-  colorAttribute = glGetAttribLocation(program, "color")
-  usetexAttribute = glGetAttribLocation(program, "usetex")
-  texcoordAttribute = glGetAttribLocation(program, "texcoord")
-  ATTRIBUTES[:] = [positionAttribute, colorAttribute, 
-                   usetexAttribute, texcoordAttribute]
-  Tmat_LOCATION[] = glGetUniformLocation(program, "Tmat")
-end
+include("vis_util.jl")
+include("vis_drawing.jl")
+include("vis_scene.jl")
 
 function make_shader_program(vsh::String, fsh::String)
   createcontextinfo()
@@ -54,9 +45,17 @@ function make_context(width, height)
   fsh = read("shaders/shader.frag", String)
   program = make_shader_program(vsh, fsh)
   glUseProgram(program)
-  make_attributes_global(program)
 
-  return Context(window, program, width, height)
+  positionAttribute = glGetAttribLocation(program, "position")
+  colorAttribute = glGetAttribLocation(program, "color")
+  usetexAttribute = glGetAttribLocation(program, "usetex")
+  texcoordAttribute = glGetAttribLocation(program, "texcoord")
+  attributes = [positionAttribute, colorAttribute, usetexAttribute, 
+                texcoordAttribute]
+  Tmat_location = glGetUniformLocation(program, "Tmat")
+
+
+  return Context(window, program, width, height, attributes, Tmat_location)
 end
 
 function print_error_if_not_empty()
@@ -124,7 +123,7 @@ function test()
   usetex = RenderData(fill(GLfloat(0), 3), 1, GL_STATIC_DRAW)
   texcoord = RenderData(fill(GLfloat(0), 6), 2, GL_STATIC_DRAW)
   idx = GLuint[0, 1, 2]
-  object2 = RenderObject([position, color, usetex, texcoord], idx)
+  object2 = RenderObject(context, [position, color, usetex, texcoord], idx)
 
 
   # road
@@ -136,7 +135,7 @@ function test()
     x[i] = r * cos(th[i])
     y[i] = r * sin(th[i])
   end
-  object3 = make_road(x, y, 0.1)
+  object3 = make_road(context, x, y, 0.1)
 
 
   # font square
@@ -154,18 +153,18 @@ function test()
   texcoord = RenderData(texcoord_data, 2, GL_STATIC_DRAW)
   idx = GLuint[0, 1, 2, 
                0, 2, 3]
-  object4 = RenderObject([position, color, usetex, texcoord], idx)
+  object4 = RenderObject(context, [position, color, usetex, texcoord], idx)
 
   # line
   color = [0.0, 0.0, 0.0]
-  l1 = make_line(0.0, 0.0, 0.5, -0.5, color)
-  s1 = make_text(string(time_ns()), 0.0, 0.0)
+  l1 = make_line(context, 0.0, 0.0, 0.5, -0.5, color)
+  s1 = make_text(context, string(time_ns()), 0.0, 0.0)
 
   # Main Render Loop ----------------------------------------------------------
   k = 0
   text = ""
 
-  car1 = make_car()
+  car1 = make_car(context)
 
   println("Set run to false")
   t0 = time_ns() / 1e9
@@ -177,7 +176,7 @@ function test()
     println(1e3 * (time_ns() / 1e9 - t))
     t = time_ns() / 1e9
     points = GLfloat[0.0, 0.0, cos(t), sin(t)]
-    update_buffer!(l1, points, ATTRIBUTES[1])
+    update_buffer!(l1, points, context.attributes[1])
     if k == 60
       #text = string(rand(1:100))
       #update_text!(s1, text, 0.0, 0.0)
@@ -208,7 +207,7 @@ function test()
 
     t = time_ns() / 1e9
     points = GLfloat[0.0, 0.0, cos(t), sin(t)]
-    update_buffer!(l1, points, ATTRIBUTES[1])
+    update_buffer!(l1, points, context.attributes[1])
     render(l1)
 
     if k == 60
