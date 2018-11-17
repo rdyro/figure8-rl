@@ -18,9 +18,8 @@ struct Road
   path::Path
   width::Float64
   road::Union{Vis.RenderObject, Nothing}
-
-  Road(path, width) = new(path, width, nothing)
 end
+Road(path, width) = new(path, width, nothing)
 
 mutable struct Agent
   id::Int
@@ -28,16 +27,14 @@ mutable struct Agent
   dynamics!::Function
   controller!::Function
   car::Union{Vis.RenderObject, Nothing}
-
-  Agent(id, x) = new(id, x, default_dynamics!, default_controller!, nothing)
-  Agent(id, x, car::Vis.RenderObject) = new(id, x, default_dynamics!, 
-                                              default_controller!, car)
 end
+Agent(id, x) = new(id, x, default_dynamics!, default_controller!, nothing)
+Agent(id, x, car::Vis.RenderObject) = new(id, x, default_dynamics!, 
+                                            default_controller!, car)
 
 struct World
   road::Road
   agents::Array{Agent, 1}
   vis_scaling::Float64
-
-  World(road::Road) = new(road, Agent[])
 end
+World(road::Road) = new(road, Agent[])
