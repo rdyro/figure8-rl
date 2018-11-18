@@ -1,27 +1,33 @@
 module sim
 
+dir_path = @__DIR__
+include_dependency(dir_path * "/../vis/vis.jl")
+
 using LinearAlgebra
-push!(LOAD_PATH, pwd() * "/vis")
+push!(LOAD_PATH, dir_path * "/../vis")
 using vis
-#include("vis.jl")
+
 include("rk4.jl")
 include("sim_figure8.jl")
 include("sim_types.jl")
 
-export vis
 export Road, Agent, World
-export rk4!, make_figure8_path, update_renderer
-
+export advance!, make_figure8_path, update_renderer
 
 # Custom Rendering ############################################################
-function update_renderer(agent::Agent, world::World)
+function update_renderer(agent::Agent, world::World, t::Float64=0.0)
   if agent.car == nothing
     return
   end
 
   (x, y) = sp2xy(agent.x[1], agent.x[3], world.road.path)
   (sx, sy) = sp2sxsy(agent.x[1], agent.x[3], world.road.path)
-  th = atan(sy, sx) - pi / 2
+
+  dx = fill(0.0, 3)
+  agent.dynamics!(dx, agent.x, Pair(agent, world), t)
+  dp = dx[3]
+
+  th = atan(dp, agent.x[2]) + atan(sy, sx) - pi / 2
 
   vis.car_lights!(agent.car, agent.is_braking)
 
@@ -36,7 +42,7 @@ function default_controller!(u::AbstractArray{Float64},
                              dx::AbstractArray{Float64}, 
                              agent_world::Pair{Agent, World}, t::Float64)
   u[1] = -0.1 * (x[2] - 120 / 3.6) # no braking nor accelerating
-  u[2] = -0.01 * x[3] # counteract lateral movement
+  u[2] = -0.01 * x[3] / dx[1] # counteract lateral movement
 
   return
 end
@@ -78,7 +84,7 @@ function default_dynamics!(dx, x, agent_world, t)
   agent.is_braking = ds * u[1] < 0
 
   dx[2] += u[1]
-  dx[3] += u[2]
+  dx[3] += isnan(u[2]) || isinf(u[2]) ? 0.0 : ds * u[2]
 
   # done
   return

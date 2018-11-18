@@ -39,7 +39,8 @@ function make_figure8_path()
   append!(X, x)
   append!(Y, y)
 
-  remove_duplicates(X, Y)
+  #remove_duplicates(X, Y)
+  (X, Y) = resample(X, Y, 300)
 
   # compute the first derivative and normalized
   dX = similar(X)
@@ -85,8 +86,8 @@ function make_figure8_path()
 
     k = cross([dr; 0], [ddr; 0])[3] / norm(dr, 2)^3
     R[i] = (abs(k) < 1e-3) ? Inf : 1 / k
-    S[i] = olds + norm(dr, 2)
-    olds = S[i]
+    S[i] = olds
+    olds += norm(dr, 2)
   end
 
   return Path(X, Y, dX, dY, ddX, ddY, Sx, Sy, Px, Py, R, S)
@@ -105,4 +106,27 @@ function remove_duplicates(x::Array{Float64}, y::Array{Float64})
     end
     i += 1
   end
+end
+
+function resample(x::Array{Float64}, y::Array{Float64}, n::Int)
+  @assert length(x) == length(y) > 2
+
+  xp = fill(0.0, n)
+  yp = fill(0.0, n)
+
+  s = cumsum(sqrt.(x.^2 + y.^2))
+  sp = range(0.0, stop=s[end], length=n)
+
+  xp[1] = x[1]
+  yp[1] = y[1]
+  for i in 2:(n-1)
+    idx = binary_search(s, sp[i]) 
+    idx = idx == length(x) ? idx - 1 : idx
+    xp[i] = (x[idx+1] - x[idx])/(s[idx+1] - s[idx]) * (sp[i] - s[idx]) + x[idx]
+    yp[i] = (y[idx+1] - y[idx])/(s[idx+1] - s[idx]) * (sp[i] - s[idx]) + y[idx]
+  end
+  xp[end] = x[end]
+  yp[end] = y[end]
+
+  return (xp, yp)
 end

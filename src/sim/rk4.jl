@@ -1,4 +1,4 @@
-function rk4!(f!::Function, x::Array, p, t::Number, tn::Number, h::Number)
+function advance!(f!::Function, x::Array, p, t::Number, tn::Number, h::Number)
   n = length(x)
 
   mem = fill(zero(eltype(x)), n * 5)
