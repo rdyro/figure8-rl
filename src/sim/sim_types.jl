@@ -27,12 +27,13 @@ mutable struct Agent
   dynamics!::Function
   controller!::Function
   is_braking::Bool
+  custom::Any
   car::Union{vis.RenderObject, Nothing}
 end
 Agent(id, x) = Agent(id, x, default_dynamics!, default_controller!, false, 
-                     nothing)
+                     nothing, nothing)
 Agent(id, x, car) = Agent(id, x, default_dynamics!, default_controller!, false, 
-                          car)
+                          nothing, car)
 
 struct World
   road::Road

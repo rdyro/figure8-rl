@@ -3,9 +3,8 @@ push!(LOAD_PATH, dir_path * "/sim")
 push!(LOAD_PATH, dir_path * "/vis")
 using sim
 using vis
+
 # Scenario: Basic scenario template
-
-
 function main()
   # load the graphical context (OpenGL handle, the graphical window, etc.)
   context = vis.setup()
