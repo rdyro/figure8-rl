@@ -41,8 +41,9 @@ function make_context(width, height)
   GLFW.MakeContextCurrent(window)
 
   # Compile the Shader Program
-  vsh = read("vis/shaders/shader.vert", String)
-  fsh = read("vis/shaders/shader.frag", String)
+  dir_path = @__DIR__
+  vsh = read(dir_path * "/shaders/shader.vert", String)
+  fsh = read(dir_path * "/shaders/shader.frag", String)
   program = make_shader_program(vsh, fsh)
   glUseProgram(program)
 
@@ -83,7 +84,8 @@ function setup()
   textureBuffer = glGenTexture()
   glActiveTexture(GL_TEXTURE0)
 
-  fp = open("vis/font/font.bin", "r")
+  dir_path = @__DIR__
+  fp = open(dir_path * "/font/font.bin", "r")
   pixels = deserialize(fp)
   close(fp)
   (w, h) = size(pixels)
