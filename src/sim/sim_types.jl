@@ -19,7 +19,6 @@ struct Road
   width::Float64
   road::Union{vis.RenderObject, Nothing}
 end
-Road(path, width, road) = Road(path, width, road)
 Road(path, width) = Road(path, width, nothing)
 
 mutable struct Agent
