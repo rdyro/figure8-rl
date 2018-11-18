@@ -1,13 +1,14 @@
 # include("sim_types.jl")
 
-function controller_toy!(u::AbstractArray{Float64},
+function toy_controller!(u::AbstractArray{Float64},
                              x::AbstractArray{Float64},
                              dx::AbstractArray{Float64},
 			     agent_world::Pair{Agent, World}, t::Float64)
-  s_margin = 4.5 # one car length
+  s_margin = 8 # one car length
 	target_vel = 60 / 3.6
-
-	world = agent_world.first
+	
+	agent = agent_world.first
+	world = agent_world.second
 	
 	s = x[1]
 	ds = dx[1]
@@ -18,14 +19,19 @@ function controller_toy!(u::AbstractArray{Float64},
 		u[1] = 0
 	end
 	
+	u[2] = -dx[3] # Counteract lateral motion
+	
 	for opponent in world.agents
-		if opponent.x[1] - s < s_margin
+		if opponent.id != agent.id && abs(opponent.x[1] - s) < s_margin && opponent.x[1] > s
 			u[1] = -10
+			u[2] = -dx[3] - 2
+			if abs(opponent.x[3] - x[3]) > 1
+				u[1] = 10
+			end
 			break;
 		end
 	end
 
-	u[2] = -dx[3] # Counteract lateral motion
 	
 	return
 end
