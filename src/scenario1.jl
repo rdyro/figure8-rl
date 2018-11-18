@@ -1,5 +1,8 @@
-push!(LOAD_PATH, pwd() * "/sim")
+dir_path = @__DIR__
+push!(LOAD_PATH, dir_path * "/sim")
+push!(LOAD_PATH, dir_path * "/vis")
 using sim
+using vis
 # Scenario: Basic scenario template
 
 
@@ -29,6 +32,7 @@ function main()
   # make the world
   world = World(road, [agent1, agent2, agent3], vis_scaling)
 
+
   window = true
   h = 1e-2
   t0 = time_ns()
@@ -42,7 +46,7 @@ function main()
     end
 
     for agent in world.agents
-      rk4!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
+      advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
       update_renderer(agent, world)
       if agent.car != nothing
         push!(to_visualize, agent.car)
