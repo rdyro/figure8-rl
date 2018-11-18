@@ -1,7 +1,6 @@
 push!(LOAD_PATH, pwd() * "/sim")
 using sim
-# Scenario: Basic scenario template
-
+# Scenario: toy case for testing a FAST RACER
 
 function main()
   # load the graphical context (OpenGL handle, the graphical window, etc.)
