@@ -6,6 +6,8 @@ using sim
 using vis
 using mdp
 
+using Serialization
+
 # state space
 const pts_per_s = 150
 const pts_per_ds = 30
@@ -21,8 +23,8 @@ const pts_per_acc = 10
 const pts_per_ste = 3
 const min_acc = -10
 const max_acc = 10
-const min_ste = -1
-const max_ste = 1
+const min_ste = -0.1
+const max_ste = 0.1
 
 # time increment
 const dt = 0.5
@@ -71,9 +73,9 @@ function xd2x(xd::AbstractArray{<: Real}, road::Road)
   dsd = xd[2]
   pd = xd[3]
 
-  s = (sd / pts_per_s) * (max_s - min_s) + min_s
-  ds = (dsd / pts_per_ds) * (max_ds - min_ds) + min_ds
-  p = (pd / pts_per_p) * (max_p - min_p) + min_p
+  s = (sd / (pts_per_s - 1)) * (max_s - min_s) + min_s
+  ds = (dsd / (pts_per_ds - 1)) * (max_ds - min_ds) + min_ds
+  p = (pd / (pts_per_p - 1)) * (max_p - min_p) + min_p
 
   return [s, ds, p]
 end
@@ -108,24 +110,49 @@ function ud2u(ud::AbstractArray{<: Int})
   accd = ud[1]
   sted = ud[2]
 
-  acc = (accd / pts_per_acc) * (max_acc - min_acc) + min_acc
-  ste = (sted / pts_per_ste) * (max_ste - min_ste) + min_ste
+  acc = (accd / (pts_per_acc - 1)) * (max_acc - min_acc) + min_acc
+  ste = (sted / (pts_per_ste - 1)) * (max_ste - min_ste) + min_ste
 
   return [acc, ste]
 end
 
 
 function controllerd!(u::AbstractArray{Float64},
-                     x::AbstractArray{Float64},
-                     dx::AbstractArray{Float64},
-                     agent_world::Pair{Agent, World}, t::Float64)
+                      x::AbstractArray{Float64},
+                      dx::AbstractArray{Float64},
+                      agent_world::Pair{Agent, World}, t::Float64)
   agent = agent_world.first
   world = agent_world.second
+
   ud = lu2ud(agent.custom)
   agent_u = ud2u(ud)
 
   u[1] = agent_u[1]
   u[2] = agent_u[2]
+
+  return
+end
+
+function dynamicsd!(dx::AbstractArray{Float64},
+                    x::AbstractArray{Float64},
+                    agent_world::Pair{Agent, World}, t::Float64)
+
+  agent = agent_world.first
+  world = agent_world.second
+
+  max_s = world.road.path.S[end]
+
+  sim.default_dynamics!(dx, x, agent_world, t)
+
+  # enforce max values
+  x[1] = x[1] > max_s ? max_s : x[1]
+  x[1] = x[1] < min_s ? min_s : x[1]
+
+  x[2] = x[2] > max_ds ? max_ds : x[2]
+  x[2] = x[2] < min_ds ? min_ds : x[2]
+
+  x[3] = x[3] > max_p ? max_p : x[3]
+  x[3] = x[3] < min_p ? min_p : x[3]
 
   return
 end
@@ -193,14 +220,46 @@ function main()
   display(maximum(road.path.S))
 
   # make the agents
-  agent1 = Agent(1, [0.0; 0.0; 0], vis.make_car(context))
-  vis.car_lights!(agent1.car, false)
+  global agent = Agent(1, [0.0; 0.0; 0], vis.make_car(context))
+  vis.car_lights!(agent.car, false)
 
 
   # make the world
-  global world = World(road, [agent1], vis_scaling)
+  global world = World(road, [agent], vis_scaling)
 
-  @time global S = make_MDP(world)
+  global P = nothing
+  global S = nothing
+
+  policy_file_path = dir_path * "/../data/fr_vi_policy.bin"
+
+  if isfile(policy_file_path)
+    fp = open(policy_file_path, "r")
+    P = deserialize(fp)
+    close(fp)
+
+    S = P.S
+
+    for i in 1:0
+      print("$(i) -> ")
+      display(mdp.iterate!(P))
+    end
+    fp = open(policy_file_path, "w")
+    serialize(fp, P)
+    close(fp)
+  else
+    S = make_MDP(world)
+    P = Policy(S, 0.999)
+    for i in 1:100
+      print("$(i) -> ")
+      display(mdp.iterate!(P))
+    end
+    fp = open(policy_file_path, "w")
+    serialize(fp, P)
+    close(fp)
+  end
+
+  agent.controller! = controllerd!
+  agent.dynamics! = dynamicsd!
 
   window = true
   h = 1e-2
@@ -215,7 +274,12 @@ function main()
     end
 
     for agent in world.agents
+      ls = xd2ls(x2xd(agent.x, world.road))
+      agent.custom = P.S[ls].a[P.Aidx[ls]]
+
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
+      println(agent.x[2])
+
       update_renderer(agent, world)
       if agent.car != nothing
         push!(to_visualize, agent.car)

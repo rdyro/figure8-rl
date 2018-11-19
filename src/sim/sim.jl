@@ -47,7 +47,9 @@ function default_controller!(u::AbstractArray{Float64},
   return
 end
 
-function default_dynamics!(dx, x, agent_world, t)
+function default_dynamics!(dx::AbstractArray{Float64}, 
+                           x::AbstractArray{Float64}, 
+                           agent_world::Pair{Agent, World}, t::Float64)
   agent = agent_world.first
   world = agent_world.second
 
