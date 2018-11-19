@@ -41,7 +41,7 @@ function default_controller!(u::AbstractArray{Float64},
                              x::AbstractArray{Float64}, 
                              dx::AbstractArray{Float64}, 
                              agent_world::Pair{Agent, World}, t::Float64)
-  u[1] = -0.1 * (x[2] - 120 / 3.6) # no braking nor accelerating
+  u[1] = -0.1 * (x[2] - 120 / 3.6)
   u[2] = -0.01 * x[3] / dx[1] # counteract lateral movement
 
   return

@@ -2,6 +2,8 @@ module mdp
 
 using DelimitedFiles
 
+export State, DetState, Policy, RandomPolicy
+
 # Type definitions ############################################################
 struct State
   a::Array{Int, 1}
@@ -187,7 +189,7 @@ function iterate!(p::Policy)
 
   det = typeof(p.S) == Dict{Int, DetState}
 
-  Ucpy = copy(p.U)
+  #Ucpy = copy(p.U)
   for sid in keys(p.S)
     s = p.S[sid]
     EUr = similar(s.a2r)
@@ -195,14 +197,14 @@ function iterate!(p::Policy)
       EUr[i] = 0.0
       if det
         if s.ns[i] > 0 # check if action is not final
-          EUr[i] = p.drate * Ucpy[s.ns[i]]
-          #EUr[i] = p.drate * p.U[s.ns[i]]
+          #EUr[i] = p.drate * Ucpy[s.ns[i]]
+          EUr[i] = p.drate * p.U[s.ns[i]]
         end
       else
         for j in 1:length(s.ns)
           if s.ns[j] > 0 # check if action is not final
-            EUr[i] += p.drate * s.Pa2ns[i, j] * Ucpy[s.ns[j]]
-            #EUr[i] += p.drate * s.Pa2ns[i, j] * p.U[s.ns[j]]
+            #EUr[i] += p.drate * s.Pa2ns[i, j] * Ucpy[s.ns[j]]
+            EUr[i] += p.drate * s.Pa2ns[i, j] * p.U[s.ns[j]]
           else
             println("Action is final")
           end
