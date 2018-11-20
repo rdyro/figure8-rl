@@ -31,11 +31,11 @@ function make_road(context::Context, x::AbstractArray, y::AbstractArray,
 
   # create points and colors
   for i in 1:len
-    points[2 * 2 * (i - 1) + 1] = x[i] + dpx[i] * t
-    points[2 * 2 * (i - 1) + 2] = y[i] + dpy[i] * t
+    points[2 * 2 * (i - 1) + 1] = x[i] + dpx[i] * t / 2
+    points[2 * 2 * (i - 1) + 2] = y[i] + dpy[i] * t / 2
 
-    points[2 * 2 * (i - 1) + 3] = x[i] - dpx[i] * t
-    points[2 * 2 * (i - 1) + 4] = y[i] - dpy[i] * t
+    points[2 * 2 * (i - 1) + 3] = x[i] - dpx[i] * t / 2
+    points[2 * 2 * (i - 1) + 4] = y[i] - dpy[i] * t / 2
 
     color[2 * 3 * (i - 1) + 1] = 0.15
     color[2 * 3 * (i - 1) + 2] = 0.15

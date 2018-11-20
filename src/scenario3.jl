@@ -13,8 +13,8 @@ const pts_per_s = 150
 const pts_per_ds = 30
 const pts_per_p = 20
 const min_s = 0.0
-const min_p = -7.0
-const max_p = 7.0
+const min_p = -12.0
+const max_p = 12.0
 const min_ds = 0.0
 const max_ds = 50.0
 
@@ -23,8 +23,8 @@ const pts_per_acc = 10
 const pts_per_ste = 3
 const min_acc = -10
 const max_acc = 10
-const min_ste = -0.1
-const max_ste = 0.1
+const min_ste = -1e-1
+const max_ste = 1e-1
 
 # time increment
 const dt = 0.5
@@ -192,7 +192,7 @@ function make_MDP(world::World)
       nxd = x2xd(nx, world.road)
 
       ns[i] = xd2ls(nxd)
-      a2r[i] = nxd[2]^2
+      a2r[i] = abs(nxd[3]) > 0.7 * world.road.width ? -1e5 : nxd[2]^2
     end
 
     S[s] = DetState(a, a2r, ns)
@@ -212,7 +212,7 @@ function main()
 
   # make the road
   path = make_figure8_path()
-  road_width = 10.0
+  road_width = 20.0
   global road = Road(path, road_width, 
                      vis.make_road(context, path.X, path.Y, road_width))
   road.road.T = vis.scale_mat(vis_scaling, vis_scaling)
@@ -239,7 +239,7 @@ function main()
 
     S = P.S
 
-    for i in 1:0
+    for i in 1:100
       print("$(i) -> ")
       display(mdp.iterate!(P))
     end
@@ -249,7 +249,7 @@ function main()
   else
     S = make_MDP(world)
     P = Policy(S, 0.999)
-    for i in 1:100
+    for i in 1:500
       print("$(i) -> ")
       display(mdp.iterate!(P))
     end
@@ -278,7 +278,7 @@ function main()
       agent.custom = P.S[ls].a[P.Aidx[ls]]
 
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
-      println(agent.x[2])
+      println(x2xd(agent.x, world.road))
 
       update_renderer(agent, world)
       if agent.car != nothing
@@ -292,4 +292,4 @@ function main()
   end
 end
 
-#main()
+main()

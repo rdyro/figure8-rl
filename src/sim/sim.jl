@@ -72,8 +72,8 @@ function default_dynamics!(dx::AbstractArray{Float64},
   # compute rates
   ds *= isnan(r / (r - p)) ? 1 : r / (r - p)
   dds = 0.0
-  dds += abs(p) > world.road.width ? -ds : 0.0
-  dp = isnan(ds^2 / r) ? 0.0 : 1e-1 * -ds^2 / r
+  dds += abs(p) > world.road.width / 2 ? -1e1 * ds : 0.0
+  dp = isnan(ds^2 / r) ? 0.0 : -2e-1 * ds^2 / r
 
   dx[1] = ds
   dx[2] = dds

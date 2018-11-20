@@ -1,7 +1,5 @@
 module mdp
-
-using DelimitedFiles
-
+using DelimitedFiles 
 export State, DetState, Policy, RandomPolicy
 
 # Type definitions ############################################################
@@ -189,21 +187,28 @@ function iterate!(p::Policy)
 
   det = typeof(p.S) == Dict{Int, DetState}
 
-  #Ucpy = copy(p.U)
-  for sid in keys(p.S)
+  SID = collect(keys(p.S))
+  EUr = fill(0.0, 0)
+  for k in 1:length(SID)
+    sid = SID[k]
     s = p.S[sid]
-    EUr = similar(s.a2r)
+
+    if length(EUr) < length(s.a2r)
+      EUr = fill(0.0, length(s.a2r))
+    end
+    for i in 1:length(EUr)
+      EUr[i] = 0.0
+    end
+
     for i in 1:length(s.a2r)
       EUr[i] = 0.0
       if det
         if s.ns[i] > 0 # check if action is not final
-          #EUr[i] = p.drate * Ucpy[s.ns[i]]
           EUr[i] = p.drate * p.U[s.ns[i]]
         end
       else
         for j in 1:length(s.ns)
           if s.ns[j] > 0 # check if action is not final
-            #EUr[i] += p.drate * s.Pa2ns[i, j] * Ucpy[s.ns[j]]
             EUr[i] += p.drate * s.Pa2ns[i, j] * p.U[s.ns[j]]
           else
             println("Action is final")
@@ -223,10 +228,12 @@ function iterate!(p::Policy)
         maxAidx = i
       end
     end
-    (p.U[sid], p.Aidx[sid]) = findmax(s.a2r + EUr)
+    #(p.U[sid], p.Aidx[sid]) = findmax(s.a2r + EUr)
+    p.U[sid] = maxU
+    p.Aidx[sid] = maxAidx
+
 
     change += abs(oldu - p.U[sid])
-
     if oldaidx != p.Aidx[sid]
       nbchange += 1
     end
