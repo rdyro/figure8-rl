@@ -182,7 +182,7 @@ function make_vector_xy(context::Context, x1::Float64, y1::Float64,
   return make_vector_thr(context, x1, y1, th, r)
 end
 
-function update_vector_thr!(context::Context, v::RenderObject, 
+function update_vector_thr!(v::RenderObject, 
                             x::Float64, y::Float64, th::Float64, r::Float64)
   th = th - pi / 2
 
@@ -201,10 +201,10 @@ function update_vector_thr!(context::Context, v::RenderObject,
     points[i+1] += y
   end
 
-  update_buffer!(v, points, context.attributes[1])
+  update_buffer!(v, points, v.context.attributes[1])
 end
 
-function update_vector_xy!(context::Context, v::RenderObject, 
+function update_vector_xy!(v::RenderObject, 
                            x1::Float64, y1::Float64, x2::Float64, y2::Float64)
   dx = x2 - x1
   dy = y2 - y1

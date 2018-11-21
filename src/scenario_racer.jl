@@ -8,9 +8,9 @@ using mdp
 
 using Serialization
 
-include("fast_racer_discretization.jl")
+include("racerd.jl")
 
-# Scenario: Basic scenario template
+# Scenario: Racer scenario
 function main()
   # load the graphical context (OpenGL handle, the graphical window, etc.)
   context = vis.setup()
@@ -20,14 +20,14 @@ function main()
   # make the road
   path = make_figure8_path()
   road_width = 20.0
-  global road = Road(path, road_width, 
+  road = Road(path, road_width, 
                      vis.make_road(context, path.X, path.Y, road_width))
   road.road.T = vis.scale_mat(vis_scaling, vis_scaling)
 
   display(maximum(road.path.S))
 
   # make the agents
-  global agent = Agent(1, [0.0; 0.0; 0], vis.make_car(context))
+  agent = Agent(1, [0.0; 0.0; 0], vis.make_car(context))
   vis.car_lights!(agent.car, false)
 
 
@@ -46,7 +46,11 @@ function main()
 
     S = P.S
 
-    for i in 1:100
+    println("Input the number of iterations")
+    repeat = readline()
+    repeat = repeat == "" ? 500 : parse(Int, repeat)
+
+    for i in 1:repeat
       print("$(i) -> ")
       display(mdp.iterate!(P))
     end
@@ -56,7 +60,11 @@ function main()
   else
     S = make_MDP(world)
     P = Policy(S, 0.999)
-    for i in 1:500
+
+    println("Input the number of iterations")
+    repeat = readline()
+    repeat = repeat == "" ? 500 : parse(Int, repeat)
+    for i in 1:repeat
       print("$(i) -> ")
       display(mdp.iterate!(P))
     end
@@ -65,8 +73,10 @@ function main()
     close(fp)
   end
 
-  agent.controller! = controllerd!
+  agent.controller! = controllerd_interp!
   agent.dynamics! = dynamicsd!
+
+  v1 = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0)
 
   window = true
   h = 1e-2
@@ -81,13 +91,34 @@ function main()
     end
 
     for agent in world.agents
+      XD = bounding_xd(agent.x, world.road)
+      X = [xd2x(xd, world.road) for xd in XD]
+      LU = [P.S[ls].a[P.Aidx[ls]] for ls in xd2ls.(XD)]
+      U = [ud2u(lu2ud(lu)) for lu in LU]
+      U1 = [u[1] for u in U]
+      U2 = [u[2] for u in U]
+
+      u1 = interp(X, agent.x, U1)
+      u2 = interp(X, agent.x, U2)
+      #display(U)
+      #display([u1, u2])
+      agent.custom = [u1, u2]
+
       ls = xd2ls(x2xd(agent.x, world.road))
-      agent.custom = P.S[ls].a[P.Aidx[ls]]
+      #println(P.S[ls].a2r[P.Aidx[ls]])
+      ##agent.custom = P.S[ls].a[P.Aidx[ls]]
 
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
-      println(x2xd(agent.x, world.road))
+      #println(agent.x)
+      #println(P.S[ls].a[P.Aidx[ls]])
+      (x, y) = sim.sp2xy(agent.x[1], agent.x[3], world.road.path)
 
-      update_renderer(agent, world)
+      th = update_renderer(agent, world) + pi / 2
+      vis.update_vector_thr!(v1, vis_scaling * x, vis_scaling * y, th, 
+                             0.2 * agent.x[2] / 50.0)
+
+      push!(to_visualize, v1)
+
       if agent.car != nothing
         push!(to_visualize, agent.car)
       end
@@ -99,4 +130,4 @@ function main()
   end
 end
 
-main()
+#main()

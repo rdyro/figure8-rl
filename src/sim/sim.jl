@@ -33,7 +33,7 @@ function update_renderer(agent::Agent, world::World, t::Float64=0.0)
 
   agent.car.T = (vis.scale_mat(world.vis_scaling, world.vis_scaling) * 
                  vis.translate_mat(x, y) * vis.rotate_mat(th))
-  return
+  return th
 end
 
 # Dynamics and Control ########################################################

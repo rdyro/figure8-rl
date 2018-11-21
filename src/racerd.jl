@@ -30,7 +30,7 @@ function ls2xd(ls::Int)
   return [sd, dsd, pd]
 end
 
-function xd2ls(xd::AbstractArray{<: Real})
+function xd2ls(xd::AbstractArray{Int})
   sd = xd[1]
   dsd = xd[2]
   pd = xd[3]
@@ -106,11 +106,91 @@ function ud2u(ud::AbstractArray{<: Int})
   return [acc, ste]
 end
 
+function bounding_xd(x::AbstractArray{<: Real}, road::Road)
+  dim = 3
+  @assert length(x) == 3
 
-function controllerd!(u::AbstractArray{Float64},
-                      x::AbstractArray{Float64},
-                      dx::AbstractArray{Float64},
-                      agent_world::Pair{Agent, World}, t::Float64)
+  xd = x2xd(x, road)
+  nx = xd2x(xd, road)
+
+  XD = [copy(xd) for i in 1:2^dim]
+
+  for i in 1:dim
+    add = fill(0, dim)
+    add[i] = 1
+    use_add = 0
+
+    if nx[i] >= x[i]
+      add .*= -1
+      use_add = 1
+    end
+
+    j = 0
+    while j < length(XD)
+      for k in 1:2^(i - 1)
+        XD[j + k] += use_add * add
+      end
+      j += 2^(i - 1)
+      use_add = use_add == 0 ? 1 : 0
+    end
+  end
+
+  return XD
+end
+
+function bounding_x(x::AbstractArray{<: Real}, road::Road)
+  XD = bounding_xd(x, road)
+  X = [xd2x(xd, road) for xd in XD]
+  return X
+end
+
+function interp(X::AbstractArray, x::AbstractArray, v::AbstractArray)
+  dim = Int(log2(length(X)))
+
+  xi = fill(0.0, dim)
+  for i in 1:dim
+    xi[i] = (x[i] - X[1][i]) / (X[end][i] - X[1][i])
+  end
+
+  c = v # no need to copy
+  for i in 1:dim
+    len = 2^(dim - i)
+    nc = fill(0.0, len)
+    for j in 1:len
+      nc[j] = c[2 * (j - 1) + 1] * (1.0 - xi[i]) + c[2 * (j - 1) + 2] * xi[i]
+    end
+    c = nc
+  end
+
+  return c[]
+end
+
+
+function controllerd_interp!(u::AbstractArray{Float64},
+                             x::AbstractArray{Float64},
+                             dx::AbstractArray{Float64},
+                             agent_world::Pair{Agent, World}, t::Float64)
+  agent = agent_world.first
+  world = agent_world.second
+
+  #=
+  ud = lu2ud(agent.custom)
+  agent_u = ud2u(ud)
+
+  u[1] = agent_u[1]
+  u[2] = agent_u[2]
+  =#
+
+  u[1] = agent.custom[1]
+  u[2] = agent.custom[2]
+
+  return
+end
+
+function controllerd_train!(u::AbstractArray{Float64},
+                            x::AbstractArray{Float64},
+                            dx::AbstractArray{Float64},
+                            agent_world::Pair{Agent, World}, t::Float64)
   agent = agent_world.first
   world = agent_world.second
 
@@ -150,7 +230,7 @@ end
 function make_MDP(world::World)
   @assert length(world.agents) == 1
   agent = world.agents[1]
-  agent.controller! = controllerd!
+  agent.controller! = controllerd_train!
 
   S = Dict{Int, DetState}()
 
@@ -182,7 +262,7 @@ function make_MDP(world::World)
       nxd = x2xd(nx, world.road)
 
       ns[i] = xd2ls(nxd)
-      a2r[i] = abs(nxd[3]) > 0.7 * world.road.width ? -1e5 : nxd[2]^2
+      a2r[i] = abs(nx[3]) > 0.35 * world.road.width ? -1e5 : (nx[1] - x[1])^3
     end
 
     S[s] = DetState(a, a2r, ns)

@@ -7,7 +7,14 @@ function advance!(f!::Function, x::Array, p, t::Number, tn::Number, h::Number)
   k3 = view(mem, (2 * n + 1):(3 * n))
   k4 = view(mem, (3 * n + 1):(4 * n))
   work = view(mem, (4 * n + 1):(5 * n))
-  while t < tn
+
+  end_loop = false
+  while !end_loop && t < tn
+    if tn - t < h
+      h = tn - t
+      end_loop = true
+    end
+
     for i = 1:n
       work[i] = x[i]
     end
@@ -32,11 +39,7 @@ function advance!(f!::Function, x::Array, p, t::Number, tn::Number, h::Number)
       x[i] += h / 6.0 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i])
     end
 
-    if tn - t > h
-      t += h
-    else
-      t = tn
-    end
+    t += h
   end
 
   return
