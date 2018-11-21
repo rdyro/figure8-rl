@@ -1,13 +1,13 @@
 module fwds_tree
-export SearchNode
+export StateNode
 
-mutable struct SearchNode
+mutable struct StateNode
   s::Array{Float64,1}
   v::Float64
   parent::Union{SearchNode,Nothing}
   children::Union{Vector{Tuple{SearchNode,Int}},Nothing}
 
-  SearchNode(root,parent) = new(root,0.0,parent,nothing)
+  StateNode(root,parent) = new(root,0.0,parent,nothing)
 end
 
 end

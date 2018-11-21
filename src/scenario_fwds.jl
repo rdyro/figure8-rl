@@ -126,7 +126,7 @@ function next_state!(x::AbstractArray{Float64}, lu::Int, agent_world::Pair{Agent
 	advance!(agent_world.first.dynamics!, x, agent_world, 0.0, dt, h)
 end
 
-function forward_search!(node::SearchNode,
+function forward_search!(node::StateNode,
 												 depth::Int,
 												 agent_world::Pair{Agent, World},
 												 discount::Float64)
@@ -141,7 +141,7 @@ function forward_search!(node::SearchNode,
 		next_state!(nx,lu,agent_world)
 		r = abs(nx[3]) > 0.7 * agent_world.second.road.width ? -1e5 : nx[2]^2
 
-		child = SearchNode(nx,node)
+		child = StateNode(nx,node)
 		child.v = r
 		
 		node.v += discount*r
@@ -172,7 +172,7 @@ function controller_fwds!(u::AbstractArray{Float64},
 	
 	discount = 0.999
 
-	T = SearchNode(x,nothing) # Initialize Tree	
+	T = StateNode(x,nothing) # Initialize Tree	
 	depth = 5
 	forward_search!(T,depth,agent,discount)
 	
