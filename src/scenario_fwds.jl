@@ -2,9 +2,12 @@ dir_path = @__DIR__
 push!(LOAD_PATH, dir_path * "/sim")
 push!(LOAD_PATH, dir_path * "/vis")
 push!(LOAD_PATH, dir_path * "/mdp")
+push!(LOAD_PATH, dir_path * "/om")
+
 using sim
 using vis
 using mdp
+using fwds_tree
 
 using Serialization
 
@@ -116,6 +119,80 @@ function ud2u(ud::AbstractArray{<: Int})
   return [acc, ste]
 end
 
+function next_state!(x::AbstractArray{Float64}, lu::Int, agent_world::Pair{Agent, World})
+	dt = 0.25
+	h = 1e-2
+	agent.custom = lu
+	advance!(agent_world.first.dynamics!, x, agent_world, 0.0, dt, h)
+end
+
+function forward_search!(node::SearchNode,
+												 depth::Int,
+												 agent_world::Pair{Agent, World},
+												 discount::Float64)
+	
+	if depth == 0
+		return
+	end
+
+	for lu in 0:(pts_per_acc * pts_per_ste - 1)
+		nx = copy(node)
+
+		next_state!(nx,lu,agent_world)
+		r = abs(nx[3]) > 0.7 * agent_world.second.road.width ? -1e5 : nx[2]^2
+
+		child = SearchNode(nx,node)
+		child.v = r
+		
+		node.v += discount*r
+
+		if node.children == nothing
+			node.children = [(child,lu)]
+		else
+			push!(node.children,(child,lu))
+		end
+	end
+
+	node.parent.v += node.v
+
+	for child_a in node.children
+		forward_search!(child_a[1], depth - 1,agent_world)
+	end
+
+	return
+end
+
+function controller_fwds!(u::AbstractArray{Float64},
+                      x::AbstractArray{Float64},
+                      dx::AbstractArray{Float64},
+                      agent_world::Pair{Agent, World}, t::Float64)
+	# Controller for forward search
+	agent = agent_world.first
+	agent.controller! = controllerd!
+	
+	discount = 0.999
+
+	T = SearchNode(x,nothing) # Initialize Tree	
+	depth = 5
+	forward_search!(T,depth,agent,discount)
+	
+	best_lu = -1
+	best_v = -Inf
+
+	for child_a in T.children
+		if child_a[1].v > best_vi
+			best_lu = child_a[2]
+			best_v = child_a[1].v
+		end
+	end
+
+	agent.controller! = controller_fwds!
+
+	ud = lu2ud(ud)
+	u = ud2u(ud)
+
+	return
+end
 
 function controllerd!(u::AbstractArray{Float64},
                       x::AbstractArray{Float64},
@@ -157,52 +234,6 @@ function dynamicsd!(dx::AbstractArray{Float64},
   return
 end
 
-function make_MDP(world::World)
-  @assert length(world.agents) == 1
-  agent = world.agents[1]
-  agent.controller! = controllerd!
-
-  S = Dict{Int, DetState}()
-
-  max_s = world.road.path.S[end]
-
-  for s in 0:(pts_per_s * pts_per_ds * pts_per_p)
-    a = collect(0:(pts_per_acc * pts_per_ste - 1))
-    a2r = fill(0.0, length(a))
-    ns = fill(-1, length(a))
-
-    xd = ls2xd(s)
-    x = xd2x(xd, world.road)
-
-    for i in 1:length(a)
-      nx = copy(x)
-      agent.custom = a[i]
-      advance!(agent.dynamics!, nx, Pair(agent, world), 0.0, dt, step_h)
-
-      # enforce max values
-      nx[1] = nx[1] > max_s ? max_s : nx[1]
-      nx[1] = nx[1] < min_s ? min_s : nx[1]
-
-      nx[2] = nx[2] > max_ds ? max_ds : nx[2]
-      nx[2] = nx[2] < min_ds ? min_ds : nx[2]
-
-      nx[3] = nx[3] > max_p ? max_p : nx[3]
-      nx[3] = nx[3] < min_p ? min_p : nx[3]
-
-      nxd = x2xd(nx, world.road)
-
-      ns[i] = xd2ls(nxd)
-      a2r[i] = abs(nxd[3]) > 0.7 * world.road.width ? -1e5 : nxd[2]^2
-    end
-
-    S[s] = DetState(a, a2r, ns)
-  end
-
-  agent.controller! = sim.default_controller!
-
-  return S
-end
-
 # Scenario: Basic scenario template
 function main()
   # load the graphical context (OpenGL handle, the graphical window, etc.)
@@ -223,43 +254,11 @@ function main()
   global agent = Agent(1, [0.0; 0.0; 0], vis.make_car(context))
   vis.car_lights!(agent.car, false)
 
+	# agent.dynamicsd!
+	agent.controller_fwds!
 
   # make the world
   global world = World(road, [agent], vis_scaling)
-
-  global P = nothing
-  global S = nothing
-
-  policy_file_path = dir_path * "/../data/fr_vi_policy.bin"
-
-  if isfile(policy_file_path)
-    fp = open(policy_file_path, "r")
-    P = deserialize(fp)
-    close(fp)
-
-    S = P.S
-
-    for i in 1:100
-      print("$(i) -> ")
-      display(mdp.iterate!(P))
-    end
-    fp = open(policy_file_path, "w")
-    serialize(fp, P)
-    close(fp)
-  else
-    S = make_MDP(world)
-    P = Policy(S, 0.999)
-    for i in 1:500
-      print("$(i) -> ")
-      display(mdp.iterate!(P))
-    end
-    fp = open(policy_file_path, "w")
-    serialize(fp, P)
-    close(fp)
-  end
-
-  agent.controller! = controllerd!
-  agent.dynamics! = dynamicsd!
 
   window = true
   h = 1e-2
@@ -274,9 +273,6 @@ function main()
     end
 
     for agent in world.agents
-      ls = xd2ls(x2xd(agent.x, world.road))
-      agent.custom = P.S[ls].a[P.Aidx[ls]]
-
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
       println(x2xd(agent.x, world.road))
 
@@ -292,4 +288,3 @@ function main()
   end
 end
 
-main()
