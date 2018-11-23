@@ -12,28 +12,19 @@ include("sim_figure8.jl")
 include("sim_types.jl")
 
 export Road, Agent, World
-export advance!, make_figure8_path, update_renderer
+export advance!, make_figure8_path, diagonstic 
 
 # Custom Rendering ############################################################
-function update_renderer(agent::Agent, world::World, t::Float64=0.0)
-  if agent.car == nothing
-    return
-  end
-
+function diagonstic(agent::Agent, world::World, t::Float64=0.0)
   (x, y) = sp2xy(agent.x[1], agent.x[3], world.road.path)
   (sx, sy) = sp2sxsy(agent.x[1], agent.x[3], world.road.path)
 
   dx = fill(0.0, 3)
+  u = fill(0.0, 2)
   agent.dynamics!(dx, agent.x, Pair(agent, world), t)
-  dp = dx[3]
+  agent.controller!(u, agent.x, dx, Pair(agent, world), t)
 
-  th = atan(dp, agent.x[2]) + atan(sy, sx) - pi / 2
-
-  vis.car_lights!(agent.car, agent.is_braking)
-
-  agent.car.T = (vis.scale_mat(world.vis_scaling, world.vis_scaling) * 
-                 vis.translate_mat(x, y) * vis.rotate_mat(th))
-  return th
+  return (x, y, sx, sy, dx, u)
 end
 
 # Dynamics and Control ########################################################
@@ -82,8 +73,6 @@ function default_dynamics!(dx::AbstractArray{Float64},
   # controller acts
   u = fill(0.0, 2)
   agent.controller!(u, x, dx, agent_world, t)
-
-  agent.is_braking = ds * u[1] < 0
 
   dx[2] += u[1]
   dx[3] += isnan(u[2]) || isinf(u[2]) ? 0.0 : ds * u[2]

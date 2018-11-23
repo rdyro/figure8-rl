@@ -91,6 +91,7 @@ function main()
     end
 
     for agent in world.agents
+      # interpolate control
       XD = bounding_xd(agent.x, world.road)
       X = [xd2x(xd, world.road) for xd in XD]
       LU = [P.S[ls].a[P.Aidx[ls]] for ls in xd2ls.(XD)]
@@ -100,27 +101,33 @@ function main()
 
       u1 = interp(X, agent.x, U1)
       u2 = interp(X, agent.x, U2)
-      #display(U)
-      #display([u1, u2])
       agent.custom = [u1, u2]
 
-      ls = xd2ls(x2xd(agent.x, world.road))
-      #println(P.S[ls].a2r[P.Aidx[ls]])
-      ##agent.custom = P.S[ls].a[P.Aidx[ls]]
-
+      # advance one frame in time
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
-      #println(agent.x)
-      #println(P.S[ls].a[P.Aidx[ls]])
-      (x, y) = sim.sp2xy(agent.x[1], agent.x[3], world.road.path)
 
-      th = update_renderer(agent, world) + pi / 2
-      vis.update_vector_thr!(v1, vis_scaling * x, vis_scaling * y, th, 
-                             0.2 * agent.x[2] / 50.0)
+      # visualize
+      (x, y, sx, sy, dx, u) = diagonstic(agent, world, t)
+      agent.is_braking = dx[1] * u[1] < 0
 
-      push!(to_visualize, v1)
+      ## get additional information
+      dp = dx[3]
+      th = atan(sy, sx)
+      th_car = atan(dp, agent.x[2]) + atan(sy, sx)
 
       if agent.car != nothing
+        ## update the car
+        vis.car_lights!(agent.car, agent.is_braking)
+        agent.car.T = (vis.scale_mat(world.vis_scaling, world.vis_scaling) * 
+                       vis.translate_mat(x, y) * 
+                       vis.rotate_mat(th_car - pi / 2))
         push!(to_visualize, agent.car)
+
+        ## update the velocity vector
+        vis.update_vector_thr!(v1, world.vis_scaling * x, 
+                               world.vis_scaling * y, th, 
+                               0.2 * agent.x[2] / 50.0)
+        push!(to_visualize, v1)
       end
     end
 
