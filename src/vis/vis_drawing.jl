@@ -15,8 +15,10 @@ mutable struct RenderObject
   context::Context
   vertex_array::GLuint
   render_buffers::AbstractArray{RenderBuffer}
+  render_data::AbstractArray{RenderData}
   elnb::Int
   idx_buffer::Union{RenderBuffer, Nothing}
+  idx_data::Union{AbstractArray{GLuint}, Nothing}
   T::Array{GLfloat, 2}
   render_lock::Threads.SpinLock
 end
@@ -44,6 +46,7 @@ function RenderObject(context::Context, render_data::AbstractArray{RenderData},
 
   # allocate the index buffer for drawing normal objects
   idx_buffer = nothing
+  idx_data = nothing
   elnb = 0
   if typeof(idxXORelnb) == Int
     idx_buffer = nothing
@@ -54,13 +57,14 @@ function RenderObject(context::Context, render_data::AbstractArray{RenderData},
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, idx_buffer.id)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(idx), idx, idx_buffer.usage)
     elnb = length(idx)
+    idx_data = copy(idxXORelnb)
   end
 
   # finish saving the configuration
   glBindVertexArray(0)
 
-  return RenderObject(context, vertex_array, render_buffers, elnb, idx_buffer, 
-                      identity_mat(), Threads.SpinLock())
+  return RenderObject(context, vertex_array, render_buffers, render_data, elnb, 
+                      idx_buffer, idx_data, identity_mat(), Threads.SpinLock())
 end
 
 function render(obj::RenderObject)
@@ -102,7 +106,9 @@ function update_buffer!(obj::RenderObject, data::Array{GLfloat},
     glBufferData(GL_ARRAY_BUFFER, obj.render_buffers[attr_idx].size, data, 
                  obj.render_buffers[attr_idx].usage)
   end
-
+  obj.render_data[attr_idx] = RenderData(data, 
+                                         obj.render_data[attr_idx].dim, 
+                                         obj.render_data[attr_idx].usage)
   unlock(obj.render_lock)
 end
 
@@ -132,6 +138,7 @@ function update_idx!(obj::RenderObject,
       glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.idx_buffer.size, idx, 
                    GL_DYNAMIC_DRAW)
     end
+    obj.idx_data = copy(idxXORelnb)
     obj.elnb = length(idx)
   else
     obj.elnb = idxXORelnb
@@ -259,4 +266,28 @@ function update_text!(obj::RenderObject, text::AbstractString, x::Float64,
   update_idx!(obj, I)
 
   return
+end
+
+function bounding_box(obj::RenderObject)
+  @assert obj.render_data[1].dim == 2
+  position = obj.render_data[1].data
+
+  max_idx = nothing
+  if obj.idx_buffer != nothing
+    max_idx = 2 * (maximum(obj.idx_data) + 1)
+  else
+    max_idx = length(position)
+  end
+  xmax = Float64(maximum(position[1:2:max_idx]))
+  xmin = Float64(minimum(position[1:2:max_idx]))
+
+  ymax = Float64(maximum(position[2:2:max_idx]))
+  ymin = Float64(minimum(position[2:2:max_idx]))
+
+  xmax = xmax == nothing ? NaN : xmax
+  xmin = xmin == nothing ? NaN : xmin
+  ymax = ymax == nothing ? NaN : ymax
+  ymin = ymin == nothing ? NaN : ymin
+
+  return (xmin, ymin, xmax, ymax)
 end

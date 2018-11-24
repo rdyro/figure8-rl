@@ -7,6 +7,7 @@ using vis
 using mdp
 
 using Serialization
+using Printf
 
 include("racerd.jl")
 
@@ -26,58 +27,51 @@ function main()
 
   display(maximum(road.path.S))
 
+  # make the world
+  global world = World(road, [], vis_scaling)
+
   # make the agents
   agent = Agent(1, [0.0; 0.0; 0], vis.make_car(context))
   vis.car_lights!(agent.car, false)
+  agent.controller! = controllerd_interp!
+  agent.dynamics! = dynamicsd!
+  push!(world.agents, agent)
 
-
-  # make the world
-  global world = World(road, [agent], vis_scaling)
-
+  # read in, iterate and store the policy
   global P = nothing
   global S = nothing
 
   policy_file_path = dir_path * "/../data/fr_vi_policy.bin"
 
+  println("Input the number of iterations")
+  repeat = readline()
+  repeat = repeat == "" ? 500 : parse(Int, repeat)
   if isfile(policy_file_path)
     fp = open(policy_file_path, "r")
     P = deserialize(fp)
     close(fp)
 
     S = P.S
-
-    println("Input the number of iterations")
-    repeat = readline()
-    repeat = repeat == "" ? 500 : parse(Int, repeat)
-
-    for i in 1:repeat
-      print("$(i) -> ")
-      display(mdp.iterate!(P))
-    end
-    fp = open(policy_file_path, "w")
-    serialize(fp, P)
-    close(fp)
   else
     S = make_MDP(world)
     P = Policy(S, 0.999)
-
-    println("Input the number of iterations")
-    repeat = readline()
-    repeat = repeat == "" ? 500 : parse(Int, repeat)
-    for i in 1:repeat
-      print("$(i) -> ")
-      display(mdp.iterate!(P))
-    end
-    fp = open(policy_file_path, "w")
-    serialize(fp, P)
-    close(fp)
   end
+  for i in 1:repeat
+    print("$(i) -> ")
+    display(mdp.iterate!(P))
+  end
+  fp = open(policy_file_path, "w")
+  serialize(fp, P)
+  close(fp)
 
-  agent.controller! = controllerd_interp!
-  agent.dynamics! = dynamicsd!
+  # make diagnostics render objects
+  vec1 = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0)
+  vec2 = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0)
+  txt_pos1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
+  txt_vel1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
+  txt_inp1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
 
-  v1 = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0)
-
+  # main loop for rendering and simulation
   window = true
   h = 1e-2
   t0 = time_ns()
@@ -124,10 +118,31 @@ function main()
         push!(to_visualize, agent.car)
 
         ## update the velocity vector
-        vis.update_vector_thr!(v1, world.vis_scaling * x, 
+        vis.update_vector_thr!(vec1, world.vis_scaling * x, 
                                world.vis_scaling * y, th, 
                                0.2 * agent.x[2] / 50.0)
-        push!(to_visualize, v1)
+        push!(to_visualize, vec1)
+
+        ## update the text
+        #vis.update_text!(txt1, string(dx[1]), world.vis_scaling * x + 0.2, 
+        #                 world.vis_scaling * y + 0.2, 0.5)
+        vis.update_text!(txt_pos1, @sprintf("pos = %3.1e", agent.x[1]), 
+                         0.7,
+                         0.7, 1.0)
+        push!(to_visualize, txt_pos1)
+        vis.update_text!(txt_vel1, @sprintf("vel = %3.1e", agent.x[2]), 
+                         0.7, 
+                         0.6, 1.0)
+        push!(to_visualize, txt_vel1)
+        vis.update_text!(txt_inp1, @sprintf("u =  (%+3.1e, %+3.1e)", u1, u2), 
+                         0.7, 
+                         0.5, 1.0)
+        push!(to_visualize, txt_inp1)
+
+        ## update the bounds vector
+        (xmin, ymin, xmax, ymax) = vis.bounding_box(txt_inp1)
+        vis.update_vector_xy!(vec2, xmin, ymin, xmax, ymax)
+        push!(to_visualize, vec2)
       end
     end
 

@@ -211,5 +211,5 @@ function update_vector_xy!(v::RenderObject,
   r = sqrt(dx^2 + dy^2)
   th = atan(dy, dx)
 
-  update_vector_thr!(context, v, x, y, th, r)
+  update_vector_thr!(v, x1, y1, th, r)
 end
