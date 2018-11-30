@@ -12,7 +12,7 @@ include("sim_figure8.jl")
 include("sim_types.jl")
 
 export Road, Agent, World
-export advance!, make_figure8_path, diagonstic 
+export advance!, make_figure8_path, diagnostic 
 
 # Custom Rendering ############################################################
 function diagnostic(agent::Agent, world::World, t::Float64=0.0)
@@ -39,8 +39,6 @@ function default_controller!(u::AbstractArray{Float64},
 end
 
 function default_dynamics!(dx::AbstractArray{Float64}, 
-                           x::AbstractArray{Float64}, 
-                           agent_world::Pair{Agent, World}, t::Float64)
   agent = agent_world.first
   world = agent_world.second
 

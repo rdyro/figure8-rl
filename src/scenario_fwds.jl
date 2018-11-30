@@ -171,7 +171,7 @@ function controller_fwds!(u::AbstractArray{Float64},
 	# Controller for forward search
 	agent = agent_world.first
 	agent.controller! = controllerd!
-	
+	agent.dynamics! = dynamicsd!
 	discount = 0.999
 
 	T = StateNode(x,nothing) # Initialize Tree	
@@ -189,10 +189,13 @@ function controller_fwds!(u::AbstractArray{Float64},
 	end
 
 	agent.controller! = controller_fwds!
+	agent.dynamics! = sim.default_dynamics!
 
-  ud = lu2ud(agent.custom)
+  ud = lu2ud(best_lu)
+	
 	u = ud2u(ud)
 
+	@show(u,best_v)
 	return
 end
 
@@ -253,7 +256,7 @@ function main()
   display(maximum(road.path.S))
 
   # make the agents
-  global agent = Agent(1, [0.0; 0.0; 0], vis.make_car(context))
+  global agent = Agent(1, [25.0; 0.0; 0], vis.make_car(context))
   vis.car_lights!(agent.car, false)
 
 	# agent.dynamicsd!
@@ -277,7 +280,7 @@ function main()
     for agent in world.agents
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
 			
-			(x, y, sx, sy, dx, u) = diagonstic(agent, world, t)
+			(x, y, sx, sy, dx, u) = sim.diagnostic(agent, world, t)
       agent.is_braking = dx[1] * u[1] < 0
 
       ## get additional information
