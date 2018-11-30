@@ -101,7 +101,7 @@ function main()
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
 
       # visualize
-      (x, y, sx, sy, dx, u) = diagonstic(agent, world, t)
+      (x, y, sx, sy, dx, u) = diagnostic(agent, world, t)
       agent.is_braking = dx[1] * u[1] < 0
 
       ## get additional information

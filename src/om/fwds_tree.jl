@@ -4,10 +4,10 @@ export StateNode
 mutable struct StateNode
   s::Array{Float64,1}
   v::Float64
-  parent::Union{SearchNode,Nothing}
-  children::Union{Vector{Tuple{SearchNode,Int}},Nothing}
+  parent::Union{StateNode,Nothing}
+  children::Union{Vector{Tuple{StateNode,Int}},Nothing}
 
-  StateNode(root,parent) = new(root,0.0,parent,nothing)
+  StateNode(state,parent) = new(state,0.0,parent,nothing)
 end
 
 end

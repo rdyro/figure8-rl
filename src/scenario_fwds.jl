@@ -120,7 +120,7 @@ function ud2u(ud::AbstractArray{<: Int})
 end
 
 function next_state!(x::AbstractArray{Float64}, lu::Int, agent_world::Pair{Agent, World})
-	dt = 0.25
+	dt = 1.0 
 	h = 1e-2
 	agent.custom = lu
 	advance!(agent_world.first.dynamics!, x, agent_world, 0.0, dt, h)
@@ -136,27 +136,29 @@ function forward_search!(node::StateNode,
 	end
 
 	for lu in 0:(pts_per_acc * pts_per_ste - 1)
-		nx = copy(node)
+		nx = copy(node.s)
 
-		next_state!(nx,lu,agent_world)
+		next_state!(nx, lu, agent_world)
 		r = abs(nx[3]) > 0.7 * agent_world.second.road.width ? -1e5 : nx[2]^2
 
-		child = StateNode(nx,node)
+		child = StateNode(nx, node)
 		child.v = r
 		
 		node.v += discount*r
 
 		if node.children == nothing
-			node.children = [(child,lu)]
+			node.children = [(child, lu)]
 		else
-			push!(node.children,(child,lu))
+			push!(node.children,(child, lu))
 		end
 	end
 
-	node.parent.v += node.v
+	if node.parent != nothing
+		node.parent.v += node.v
+	end
 
 	for child_a in node.children
-		forward_search!(child_a[1], depth - 1,agent_world)
+		forward_search!(child_a[1], depth - 1, agent_world, discount)
 	end
 
 	return
@@ -173,14 +175,14 @@ function controller_fwds!(u::AbstractArray{Float64},
 	discount = 0.999
 
 	T = StateNode(x,nothing) # Initialize Tree	
-	depth = 5
-	forward_search!(T,depth,agent,discount)
+	depth = 1
+	forward_search!(T,depth,agent_world,discount)
 	
 	best_lu = -1
 	best_v = -Inf
 
 	for child_a in T.children
-		if child_a[1].v > best_vi
+		if child_a[1].v > best_v
 			best_lu = child_a[2]
 			best_v = child_a[1].v
 		end
@@ -188,7 +190,7 @@ function controller_fwds!(u::AbstractArray{Float64},
 
 	agent.controller! = controller_fwds!
 
-	ud = lu2ud(ud)
+  ud = lu2ud(agent.custom)
 	u = ud2u(ud)
 
 	return
@@ -255,7 +257,7 @@ function main()
   vis.car_lights!(agent.car, false)
 
 	# agent.dynamicsd!
-	agent.controller_fwds!
+	agent.controller! = controller_fwds!
 
   # make the world
   global world = World(road, [agent], vis_scaling)
@@ -274,10 +276,20 @@ function main()
 
     for agent in world.agents
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
-      println(x2xd(agent.x, world.road))
+			
+			(x, y, sx, sy, dx, u) = diagonstic(agent, world, t)
+      agent.is_braking = dx[1] * u[1] < 0
 
-      update_renderer(agent, world)
+      ## get additional information
+      dp = dx[3]
+      th = atan(sy, sx)
+      th_car = atan(dp, agent.x[2]) + atan(sy, sx)
+
       if agent.car != nothing
+				vis.car_lights!(agent.car, agent.is_braking)
+        agent.car.T = (vis.scale_mat(world.vis_scaling, world.vis_scaling) *
+                       vis.translate_mat(x, y) *
+                       vis.rotate_mat(th_car - pi / 2))
         push!(to_visualize, agent.car)
       end
     end

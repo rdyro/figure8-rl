@@ -15,7 +15,7 @@ export Road, Agent, World
 export advance!, make_figure8_path, diagonstic 
 
 # Custom Rendering ############################################################
-function diagonstic(agent::Agent, world::World, t::Float64=0.0)
+function diagnostic(agent::Agent, world::World, t::Float64=0.0)
   (x, y) = sp2xy(agent.x[1], agent.x[3], world.road.path)
   (sx, sy) = sp2sxsy(agent.x[1], agent.x[3], world.road.path)
 
