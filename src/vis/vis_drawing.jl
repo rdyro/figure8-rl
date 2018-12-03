@@ -94,7 +94,7 @@ function update_buffer!(obj::RenderObject, data::Array{GLfloat},
     glBindBuffer(GL_ARRAY_BUFFER, obj.render_buffers[attr_idx].id)
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(data), data)
   else
-    println("RESIZING BUFFER")
+    #println("RESIZING BUFFER")
 
     id = obj.render_buffers[attr_idx].id
     usage = obj.render_buffers[attr_idx].usage
@@ -126,7 +126,7 @@ function update_idx!(obj::RenderObject,
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj.idx_buffer.id)
       glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(idx), idx)
     else
-      println("RESIZING IDX")
+      #println("RESIZING IDX")
 
       id = obj.idx_buffer.id
       usage = obj.idx_buffer.usage

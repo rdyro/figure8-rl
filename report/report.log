@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2018.11.7)  29 NOV 2018 20:35
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2018.11.7)  2 DEC 2018 22:53
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -616,14 +616,14 @@ LaTeX Font Info:    ... okay on input line 129.
 * \headsep=25.0pt
 * \topskip=10.0pt
 * \footskip=30.0pt
-* \marginparwidth=65.0pt
-* \marginparsep=11.0pt
+* \marginparwidth=4.0pt
+* \marginparsep=10.0pt
 * \columnsep=10.0pt
 * \skip\footins=9.0pt plus 4.0pt minus 2.0pt
 * \hoffset=0.0pt
 * \voffset=0.0pt
 * \mag=1000
-* \@twocolumnfalse
+* \@twocolumntrue
 * \@twosidefalse
 * \@mparswitchfalse
 * \@reversemarginfalse
@@ -773,10 +773,13 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 [1
 
 
+
 {/usr/local/texlive/2018/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
-(./sections/abstract.tex) [2] (./sections/introduction.tex)
-(./sections/methods.tex) (./sections/results.tex) (./sections/discussion.tex)
-(./sections/conclusions.tex) [3] (./report.bbl
+(./sections/abstract.tex) (./sections/introduction.tex) (./sections/methods.tex
+) (./sections/results.tex) (./sections/discussion.tex)
+(./sections/conclusions.tex) [2
+
+] (./report.bbl
 
 LaTeX Warning: Empty `thebibliography' environment on input line 8.
 
@@ -789,7 +792,9 @@ See the caption package documentation for explanation.
 Package caption Warning: Unused \captionsetup[table] on input line 35.
 See the caption package documentation for explanation.
 
-[4] (./report.aux) ) 
+[3
+
+] (./report.aux) ) 
 Here is how much of TeX's memory you used:
  20090 strings out of 492639
  371996 string characters out of 6129302
@@ -798,16 +803,16 @@ Here is how much of TeX's memory you used:
  542715 words of font info for 66 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  45i,11n,71p,1195b,382s stack positions out of 5000i,500n,10000p,200000b,80000s
-</usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsf
-onts/cm/cmbx10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfo
-nts/cm/cmbx12.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfon
-ts/cm/cmr10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts
-/cm/cmr12.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/c
-m/cmr17.pfb>
-Output written on report.pdf (4 pages, 64070 bytes).
+</usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfon
+ts/cm/cmbx10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfont
+s/cm/cmbx12.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts
+/cm/cmr10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/c
+m/cmr12.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/
+cmr17.pfb>
+Output written on report.pdf (3 pages, 62472 bytes).
 PDF statistics:
- 37 PDF objects out of 1000 (max. 8388607)
- 25 compressed objects within 1 object stream
+ 34 PDF objects out of 1000 (max. 8388607)
+ 23 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 
