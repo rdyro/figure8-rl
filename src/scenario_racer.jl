@@ -11,7 +11,185 @@ using dis
 using Serialization
 using Printf
 
-include("racerd.jl")
+# state space
+const pts_per_s = 150
+const pts_per_ds = 30
+const pts_per_p = 20
+const min_s = 0.0
+const min_p = -12.0
+const max_p = 12.0
+const min_ds = 0.0
+const max_ds = 50.0
+
+# action space
+const pts_per_acc = 10
+const pts_per_ste = 3
+const min_acc = -15
+const max_acc = 5
+const min_ste = -1e-1
+const max_ste = 1e-1
+
+function discretize(world::World)
+  max_s = world.road.path.S[end]
+  state_d = dis.Discretization([pts_per_s, pts_per_ds, pts_per_p],
+                               [min_s, min_ds, min_p],
+                               [max_s, max_ds, max_p])
+  ctrl_d = dis.Discretization([pts_per_acc, pts_per_ste],
+                              [min_acc, min_ste],
+                              [max_acc, max_ste])
+  return (state_d, ctrl_d)
+end
+
+
+
+function controllerd_interp!(u::AbstractArray{Float64},
+                             x::AbstractArray{Float64},
+                             dx::AbstractArray{Float64},
+                             agent_world::Pair{Agent, World}, t::Float64)
+  agent = agent_world.first
+  world = agent_world.second
+
+  P = agent.custom[1]
+  state_d = agent.custom[2]
+  ctrl_d = agent.custom[3]
+
+  x = copy(agent.x)
+  x[1] = mod(x[1], state_d.mx[1])
+  dis.clamp_x!(state_d, x)
+
+  # interpolate control
+  X = dis.bounding_X(state_d, x)
+  U1 = fill(0.0, length(X))
+  U2 = fill(0.0, length(X))
+  for i in 1:length(X)
+    ls = dis.x2ls(state_d, X[i])
+    lu = P.S[ls].a[P.Aidx[ls]]
+    uv = dis.ls2x(ctrl_d, lu)
+    U1[i] = uv[1]
+    U2[i] = uv[2]
+  end
+  u[1] = dis.interp(X, x, U1)
+  u[2] = dis.interp(X, x, U2)
+end
+
+function controllerd_train!(u::AbstractArray{Float64},
+                            x::AbstractArray{Float64},
+                            dx::AbstractArray{Float64},
+                            agent_world::Pair{Agent, World}, t::Float64)
+  agent = agent_world.first
+  world = agent_world.second
+
+  ctrl_d = agent.custom[3]
+  lu = agent.custom[4]
+  agent_u = dis.ls2x(ctrl_d, lu)
+
+  u[1] = agent_u[1]
+  u[2] = agent_u[2]
+end
+
+function dynamicsd!(dx::AbstractArray{Float64},
+                    x::AbstractArray{Float64},
+                    agent_world::Pair{Agent, World}, t::Float64)
+
+  agent = agent_world.first
+  world = agent_world.second
+
+
+  state_d = agent.custom[2]
+  sim.default_dynamics!(dx, x, agent_world, t)
+
+  x[1] = mod(x[1], state_d.mx[1])
+  dis.clamp_x!(state_d, x)
+end
+
+function reward(world, agent, x, a, nx)
+  return abs(nx[3]) > 0.35 * world.road.width ? -1e9 : nx[2]^3
+end
+
+
+const dt = 1.5 # time increment for planning
+const step_h = 1e-1 # dt for numerical integration
+function make_MDP(world::World)
+  @assert length(world.agents) == 1
+  agent = world.agents[1]
+  agent.controller! = controllerd_train!
+
+  (state_d, ctrl_d) = discretize(world)
+
+  S = Dict{Int, DetState}()
+  for s in 0:(prod(state_d.pt) - 1)
+    a = collect(0:(prod(ctrl_d.pt) - 1))
+    a2r = fill(0.0, length(a))
+    ns = fill(-1, length(a))
+
+    xd = dis.ls2xd(state_d, s)
+    x = dis.xd2x(state_d, xd)
+
+    for i in 1:length(a)
+      nx = copy(x)
+      lu = a[i]
+      agent.custom = (nothing, state_d, ctrl_d, lu)
+      #println("Before = $(nx)")
+      advance!(agent.dynamics!, nx, Pair(agent, world), 0.0, dt, step_h)
+      #println("After  = $(nx)")
+
+      # enforce max values
+      dis.clamp_x!(state_d, nx)
+      nxd = dis.x2xd(state_d, nx)
+      ns[i] = dis.xd2ls(state_d, nxd)
+
+      a2r[i] = reward(world, agent, x, a[i], nx)
+    end
+
+    S[s] = DetState(a, a2r, ns)
+  end
+
+  agent.controller! = sim.default_controller!
+
+  return S
+end
+
+function update_info(info::vis.InfoBox, agent::Agent, world::World, t::Float64)
+  (x, y, sx, sy, dx, u) = diagnostic(agent, world, t)
+
+  dp = dx[3]
+  th = atan(sy, sx)
+  th_car = atan(dp, agent.x[2]) + atan(sy, sx)
+
+  vis.update_vector_thr!(info.ds_vec, info.scaling * x, 
+                         info.scaling * y, th, 
+                         0.2 * agent.x[2] / 50.0)
+  vis.update_vector_thr!(info.u1_vec, info.scaling * x, 
+                         info.scaling * y, th, 
+                         0.2 * u[1] / 10.0)
+  vis.update_vector_thr!(info.u2_vec, info.scaling * x, 
+                         info.scaling * y, th + pi / 2, 
+                         0.2 * u[2] / 0.1)
+
+  offset = 0.0
+  vis.update_text!(info.id_text, @sprintf("Agent %d", agent.id), 
+                   info.x, info.y - offset, 1.0)
+  (xmin, ymin, xmax, ymax) = vis.bounding_box(info.id_text)
+  offset += ymax - ymin
+  vis.update_text!(info.s_text, @sprintf("s= %3.1e", agent.x[1]), 
+                   info.x, info.y - offset, 1.0)
+  (xmin, ymin, xmax, ymax) = vis.bounding_box(info.id_text)
+  offset += ymax - ymin
+  vis.update_text!(info.ds_text, @sprintf("ds= %3.1e", agent.x[2]), 
+                   info.x, info.y - offset, 1.0)
+  (xmin, ymin, xmax, ymax) = vis.bounding_box(info.id_text)
+  offset += ymax - ymin
+  vis.update_text!(info.p_text, @sprintf("p= %3.1e", agent.x[3]), 
+                   info.x, info.y - offset, 1.0)
+  (xmin, ymin, xmax, ymax) = vis.bounding_box(info.id_text)
+  offset += ymax - ymin
+  vis.update_text!(info.u1_text, @sprintf("u1= %+3.1e", u[1]),
+                   info.x, info.y - offset, 1.0)
+  (xmin, ymin, xmax, ymax) = vis.bounding_box(info.id_text)
+  offset += ymax - ymin
+  vis.update_text!(info.u2_text, @sprintf("u2= %+3.1e", u[2]),
+                   info.x, info.y - offset, 1.0)
+end
 
 # Scenario: Racer scenario
 function main()
@@ -69,13 +247,7 @@ function main()
   agent.custom = (P, state_d, ctrl_d)
 
   # make diagnostics render objects
-  vec1 = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0)
-  vec2 = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0)
-  txt_pos1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
-  txt_vel1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
-  txt_p1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
-  txt_r1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
-  txt_inp1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
+  info = vis.InfoBox(context, 0.75, 0.75, vis_scaling)
 
   # main loop for rendering and simulation
   window = true
@@ -85,7 +257,7 @@ function main()
   while window
     t = (time_ns() - t0) / 1e9
 
-    to_visualize = vis.RenderObject[]
+    to_visualize = []
     if world.road.road != nothing
       push!(to_visualize, world.road.road)
     end
@@ -93,6 +265,7 @@ function main()
     for agent in world.agents
       ## advance one frame in time
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
+      update_info(info, agent, world, t)
 
       ## visualize
       (x, y, sx, sy, dx, u) = diagnostic(agent, world, t)
@@ -110,47 +283,12 @@ function main()
                        vis.translate_mat(x, y) * 
                        vis.rotate_mat(th_car - pi / 2))
         push!(to_visualize, agent.car)
-
-        ## update the velocity vector
-        vis.update_vector_thr!(vec1, world.vis_scaling * x, 
-                               world.vis_scaling * y, th, 
-                               0.2 * agent.x[2] / 50.0)
-        push!(to_visualize, vec1)
-
-        ## update the text
-        #vis.update_text!(txt1, string(dx[1]), world.vis_scaling * x + 0.2, 
-        #                 world.vis_scaling * y + 0.2, 0.5)
-        vis.update_text!(txt_pos1, @sprintf("pos = %3.1e", agent.x[1]), 
-                         0.7, 0.7, 1.0)
-        push!(to_visualize, txt_pos1)
-        vis.update_text!(txt_vel1, @sprintf("vel = %3.1e", agent.x[2]), 
-                         0.7, 0.6, 1.0)
-        push!(to_visualize, txt_vel1)
-        vis.update_text!(txt_p1, @sprintf("p = %3.1e", agent.x[3]), 
-                         0.7, 0.5, 1.0)
-        push!(to_visualize, txt_p1)
-        vis.update_text!(txt_inp1, @sprintf("u =  (%+3.1e, %+3.1e)", u[1], 
-                                            u[2]), 0.7, 0.4, 1.0)
-        push!(to_visualize, txt_inp1)
-
-
-        ls = dis.x2ls(state_d, agent.x)
-        r = P.S[ls].a2r[P.Aidx[ls]]
-        vis.update_text!(txt_r1, @sprintf("r = %3.1e", r),
-                         0.7, 0.3, 1.0)
-        push!(to_visualize, txt_r1)
-
-        ## update the bounds vector
-        (xmin, ymin, xmax, ymax) = vis.bounding_box(txt_inp1)
-        vis.update_vector_xy!(vec2, xmin, ymin, xmax, ymax)
-        push!(to_visualize, vec2)
       end
     end
+    push!(to_visualize, info)
 
     window = vis.visualize(context, to_visualize)
 
     oldt = t
   end
 end
-
-#main()

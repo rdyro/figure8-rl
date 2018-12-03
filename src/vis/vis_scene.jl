@@ -1,5 +1,83 @@
 using LinearAlgebra
 
+struct InfoBox
+  context::Context
+  x::Float64
+  y::Float64
+  scaling::Float64
+
+  ds_vec::RenderObject
+  u1_vec::RenderObject
+  u2_vec::RenderObject
+
+  id_text::RenderObject
+  s_text::RenderObject
+  ds_text::RenderObject
+  p_text::RenderObject
+  u1_text::RenderObject
+  u2_text::RenderObject
+
+  box::RenderObject
+end
+
+function InfoBox(context::Context, x::Float64, y::Float64, scaling::Float64)
+  ds_vec = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0, [1.0, 0.0, 0.0])
+  u1_vec = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0, [1.0, 1.0, 0.0])
+  u2_vec = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0, [1.0, 1.0, 0.0])
+
+  id_text = vis.make_text(context, "test", 0.0, 0.0, 0.5)
+  s_text = vis.make_text(context, "test", 0.0, 0.0, 0.5)
+  ds_text = vis.make_text(context, "test", 0.0, 0.0, 0.5)
+  p_text = vis.make_text(context, "test", 0.0, 0.0, 0.5)
+  u1_text = vis.make_text(context, "test", 0.0, 0.0, 0.5)
+  u2_text = vis.make_text(context, "test", 0.0, 0.0, 0.5)
+
+  position = RenderData(fill(GLfloat(0.0), 2 * 8), 2, GL_DYNAMIC_DRAW)
+  color = RenderData(fill(GLfloat(0.0), 3 * 8), 3, GL_STATIC_DRAW)
+  usetext = RenderData(fill(GLfloat(0.0), 1 * 8), 1, GL_STATIC_DRAW)
+  texcoord = RenderData(fill(GLfloat(0.0), 2 * 8), 2, GL_STATIC_DRAW)
+  elnb = 8
+
+  box = RenderObject(context, [position, color, usetext, texcoord], elnb)
+
+  return InfoBox(context, x, y, scaling, ds_vec, u1_vec, u2_vec, 
+                 id_text, s_text, ds_text, p_text, u1_text, u2_text, box)
+end
+
+function render(info::InfoBox)
+  xmin = Inf
+  xmax = -Inf
+  ymin = Inf
+  ymax = -Inf
+  all_text = [info.id_text, info.s_text, info.ds_text, info.p_text, 
+              info.u1_text, info.u2_text]
+  for text in all_text
+    (_xmin, _ymin, _xmax, _ymax) = bounding_box(text)
+    xmin = min(xmin, _xmin)
+    xmax = max(xmax, _xmax)
+    ymin = min(ymin, _ymin)
+    ymax = max(ymax, _ymax)
+
+    render(text)
+  end
+  render(info.ds_vec)
+  render(info.u1_vec)
+  render(info.u2_vec)
+  position = GLfloat[xmin, ymin, 
+                     xmin, ymax, 
+
+                     xmin, ymax,
+                     xmax, ymax, 
+
+                     xmax, ymax, 
+                     xmax, ymin, 
+
+                     xmax, ymin, 
+                     xmin, ymin]
+  update_buffer!(info.box, position, info.context.attributes[1])
+  render(info.box)
+end
+
 function make_road(context::Context, x::AbstractArray, y::AbstractArray, 
                    t::Number)
   @assert length(x) == length(y) > 1
@@ -142,8 +220,8 @@ end
 
 # Vectors #####################################################################
 function make_vector_thr(context::Context, x::Float64, y::Float64, 
-                     th::Float64, r::Float64,
-                     color::AbstractArray{<: Real}=GLfloat[1.0, 0.0, 0.0])
+                         th::Float64, r::Float64,
+                         color::AbstractArray{<: Real}=GLfloat[1.0, 0.0, 0.0])
   th = th - pi / 2
 
   arrow_r = 0.015
@@ -172,19 +250,24 @@ function make_vector_thr(context::Context, x::Float64, y::Float64,
 end
 
 function make_vector_xy(context::Context, x1::Float64, y1::Float64, 
-                     x2::Float64, y2::Float64,
-                     color::AbstractArray{<: Real}=GLfloat[1.0, 0.0, 0.0])
+                        x2::Float64, y2::Float64,
+                        color::AbstractArray{<: Real}=GLfloat[1.0, 0.0, 0.0])
   dx = x2 - x1
   dy = y2 - y1
   th = atan(dy, dx)
   r = sqrt(dx^2 + dy^2)
 
-  return make_vector_thr(context, x1, y1, th, r)
+  return make_vector_thr(context, x1, y1, th, r, color)
 end
 
 function update_vector_thr!(v::RenderObject, 
                             x::Float64, y::Float64, th::Float64, r::Float64)
   th = th - pi / 2
+
+  if r < 0.0
+    r = -r
+    th += pi
+  end
 
   arrow_r = 0.015
   points = GLfloat[0, 0,

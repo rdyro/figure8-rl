@@ -206,7 +206,7 @@ function test()
   return
 end
 
-function visualize(context::Context, objects::Array{RenderObject})
+function visualize(context::Context, objects::Array{Any, 1})
   if GLFW.WindowShouldClose(context.window)
     GLFW.DestroyWindow(context.window)
 
