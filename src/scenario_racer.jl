@@ -1,10 +1,12 @@
 dir_path = @__DIR__
-push!(LOAD_PATH, dir_path * "/sim")
-push!(LOAD_PATH, dir_path * "/vis")
-push!(LOAD_PATH, dir_path * "/mdp")
+push!(LOAD_PATH, dir_path * "/sim") # simulation
+push!(LOAD_PATH, dir_path * "/vis") # visualization
+push!(LOAD_PATH, dir_path * "/mdp") # value iteration MDP
+push!(LOAD_PATH, dir_path * "/dis") # discretization
 using sim
 using vis
 using mdp
+using dis
 
 using Serialization
 using Printf
@@ -15,17 +17,14 @@ include("racerd.jl")
 function main()
   # load the graphical context (OpenGL handle, the graphical window, etc.)
   context = vis.setup()
-
   vis_scaling = 0.01
 
   # make the road
   path = make_figure8_path()
   road_width = 20.0
   road = Road(path, road_width, 
-                     vis.make_road(context, path.X, path.Y, road_width))
+              vis.make_road(context, path.X, path.Y, road_width))
   road.road.T = vis.scale_mat(vis_scaling, vis_scaling)
-
-  display(maximum(road.path.S))
 
   # make the world
   global world = World(road, [], vis_scaling)
@@ -39,7 +38,8 @@ function main()
 
   # read in, iterate and store the policy
   global P = nothing
-  global S = nothing
+  S = nothing
+  global (state_d, ctrl_d) = discretize(world)
 
   policy_file_path = dir_path * "/../data/fr_vi_policy.bin"
 
@@ -48,7 +48,7 @@ function main()
   repeat = repeat == "" ? 500 : parse(Int, repeat)
   if isfile(policy_file_path)
     fp = open(policy_file_path, "r")
-    P = deserialize(fp)
+    (P, state_d, ctrl_d) = deserialize(fp)
     close(fp)
 
     S = P.S
@@ -61,14 +61,20 @@ function main()
     display(mdp.iterate!(P))
   end
   fp = open(policy_file_path, "w")
-  serialize(fp, P)
+  serialize(fp, (P, state_d, ctrl_d))
   close(fp)
+
+  # switch agent's trained controller on
+  agent.controller! = controllerd_interp!
+  agent.custom = (P, state_d, ctrl_d)
 
   # make diagnostics render objects
   vec1 = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0)
   vec2 = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0)
   txt_pos1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
   txt_vel1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
+  txt_p1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
+  txt_r1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
   txt_inp1 = vis.make_text(context, "", 0.0, 0.0, 0.5)
 
   # main loop for rendering and simulation
@@ -85,22 +91,10 @@ function main()
     end
 
     for agent in world.agents
-      # interpolate control
-      XD = bounding_xd(agent.x, world.road)
-      X = [xd2x(xd, world.road) for xd in XD]
-      LU = [P.S[ls].a[P.Aidx[ls]] for ls in xd2ls.(XD)]
-      U = [ud2u(lu2ud(lu)) for lu in LU]
-      U1 = [u[1] for u in U]
-      U2 = [u[2] for u in U]
-
-      u1 = interp(X, agent.x, U1)
-      u2 = interp(X, agent.x, U2)
-      agent.custom = [u1, u2]
-
-      # advance one frame in time
+      ## advance one frame in time
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
 
-      # visualize
+      ## visualize
       (x, y, sx, sy, dx, u) = diagnostic(agent, world, t)
       agent.is_braking = dx[1] * u[1] < 0
 
@@ -127,17 +121,24 @@ function main()
         #vis.update_text!(txt1, string(dx[1]), world.vis_scaling * x + 0.2, 
         #                 world.vis_scaling * y + 0.2, 0.5)
         vis.update_text!(txt_pos1, @sprintf("pos = %3.1e", agent.x[1]), 
-                         0.7,
-                         0.7, 1.0)
+                         0.7, 0.7, 1.0)
         push!(to_visualize, txt_pos1)
         vis.update_text!(txt_vel1, @sprintf("vel = %3.1e", agent.x[2]), 
-                         0.7, 
-                         0.6, 1.0)
+                         0.7, 0.6, 1.0)
         push!(to_visualize, txt_vel1)
-        vis.update_text!(txt_inp1, @sprintf("u =  (%+3.1e, %+3.1e)", u1, u2), 
-                         0.7, 
-                         0.5, 1.0)
+        vis.update_text!(txt_p1, @sprintf("p = %3.1e", agent.x[3]), 
+                         0.7, 0.5, 1.0)
+        push!(to_visualize, txt_p1)
+        vis.update_text!(txt_inp1, @sprintf("u =  (%+3.1e, %+3.1e)", u[1], 
+                                            u[2]), 0.7, 0.4, 1.0)
         push!(to_visualize, txt_inp1)
+
+
+        ls = dis.x2ls(state_d, agent.x)
+        r = P.S[ls].a2r[P.Aidx[ls]]
+        vis.update_text!(txt_r1, @sprintf("r = %3.1e", r),
+                         0.7, 0.3, 1.0)
+        push!(to_visualize, txt_r1)
 
         ## update the bounds vector
         (xmin, ymin, xmax, ymax) = vis.bounding_box(txt_inp1)
