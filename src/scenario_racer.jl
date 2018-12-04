@@ -158,8 +158,16 @@ function main()
   # ------------------------------------------------------------------------- #
 
   # Forward Search Approach ------------------------------------------------- #
+  #=
   ctrl_d = discretize_fwds(world)
   agent.controller! = olm.controller_fwds!
+  =#
+  # ------------------------------------------------------------------------- #
+
+  # MCTS Approach ----------------------------------------------------------- #
+  (state_d, _) = discretize_vit(world)
+  ctrl_d = discretize_fwds(world)
+  agent.controller! = olm.controller_mcts!
   # ------------------------------------------------------------------------- #
 
   # make diagnostics render objects
@@ -180,8 +188,16 @@ function main()
 
     for agent in world.agents
       # Forward Search Approach --------------------------------------------- #
+      #=
       @time plan = olm.replan_fwds(agent.x, agent, world, reward, ctrl_d, 4)
       agent.custom = plan.value.u
+      =#
+      # --------------------------------------------------------------------- #
+
+      # Forward Search Approach --------------------------------------------- #
+      @time us = olm.plan_mcts(agent.x, agent, world, reward, state_d, ctrl_d, 
+                               4)
+      agent.custom = us
       # --------------------------------------------------------------------- #
 
       ## advance one frame in time

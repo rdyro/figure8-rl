@@ -9,6 +9,7 @@ using dis
 
 const olm_dt = 1.0 # time increment for planning step
 const olm_h = 1e-1 # time increment for numerical integration
+const olm_mcts_c = 0.1 # exploration parameter for MCTS
 const olm_gamma = 0.9999 # discount factor
 
 mutable struct Tree
