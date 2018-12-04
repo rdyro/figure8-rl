@@ -92,7 +92,7 @@ function make_MDP(agent::World, world::World, reward::Function,
       ns[i] = dis.xd2ls(state_d, nxd)
       u = dis.ls2x(ctrl_d, lu)
 
-      a2r[i] = reward(world, agent, x, u, nx)
+      a2r[i] = reward(x, u, nx, agent, world)
     end
 
     S[s] = DetState(a, a2r, ns)

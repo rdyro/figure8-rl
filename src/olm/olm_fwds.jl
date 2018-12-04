@@ -7,17 +7,17 @@ mutable struct FwdsNode
   FwdsNode() = new(Float64[], 0.0, Float64[])
 end
 
-function replan(x::AbstractArray{Float64, 1}, agent::Agent, world::World, 
-                reward::Function, ctrl_d::Discretization, depth::Int)
+function replan_fwds(x::AbstractArray{Float64, 1}, agent::Agent, world::World, 
+                     reward::Function, ctrl_d::Discretization, depth::Int)
   root = Tree(FwdsNode(x))
   plan = root
 
-  fwds_select_action(x, agent, world, reward, ctrl_d, root, depth)
+  select_action_fwds(x, agent, world, reward, ctrl_d, root, depth)
 
   return plan
 end
 
-function fwds_select_action(x::AbstractArray{Float64, 1}, agent::Agent, 
+function select_action_fwds(x::AbstractArray{Float64, 1}, agent::Agent, 
                             world::World, reward::Function, 
                             ctrl_d::Discretization, node::Tree, depth::Int)
   if depth <= 0
@@ -42,10 +42,10 @@ function fwds_select_action(x::AbstractArray{Float64, 1}, agent::Agent,
     value = FwdsNode(nx)
     node.next[la + 1] = Tree(value)
 
-    next_r = fwds_select_action(nx, agent, world, reward, ctrl_d, 
+    next_r = select_action_fwds(nx, agent, world, reward, ctrl_d, 
                                 node.next[la + 1], depth - 1)
 
-    r = reward(world, agent, x, u, nx) + olm_gamma * next_r
+    r = reward(x, u, nx, agent, world) + olm_gamma * next_r
     if r > max_r
       max_r = r
       las = la

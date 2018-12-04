@@ -55,7 +55,7 @@ function discretize_fwds(world::World)
   return ctrl_d
 end
 
-function reward(world, agent, x, u, nx)
+function reward(x, u, nx, agent, world)
   return abs(nx[3]) > 0.35 * world.road.width ? -1e9 : nx[2]^3
 end
 
@@ -180,7 +180,7 @@ function main()
 
     for agent in world.agents
       # Forward Search Approach --------------------------------------------- #
-      @time plan = olm.replan(agent.x, agent, world, reward, ctrl_d, 4)
+      @time plan = olm.replan_fwds(agent.x, agent, world, reward, ctrl_d, 4)
       agent.custom = plan.value.u
       # --------------------------------------------------------------------- #
 
