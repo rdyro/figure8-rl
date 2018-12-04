@@ -1,32 +1,27 @@
 mutable struct MctsNode
-  ls::Int
   x::AbstractArray{Float64, 1}
   la::Int
   u::AbstractArray{Float64, 1}
   q::Float64
   N::Int
+  Ns::Int
 
-  MctsNode() = new(-1, Float64[], -1, Float64[], 0.0, 1)
-  MctsNode(ls, x, la, u, r) = new(ls, x, la, u, r, 1)
+  MctsNode() = new(Float64[], -1, Float64[], 0.0, 1, 1)
+  MctsNode(x, la, u, r) = new(x, la, u, r, 1, 1)
 end
 
 function plan_mcts(x::AbstractArray{Float64, 1}, agent::Agent, world::World, 
-                   reward::Function, state_d::Discretization, 
-                   ctrl_d::Discretization, depth::Int)
+                   reward::Function, ctrl_d::Discretization, depth::Int)
   x = copy(x)
   x[1] = mod(x[1], world.road.path.S[end])
-  dis.clamp_x!(state_d, x)
-  ls = dis.x2ls(state_d, x)
   x = copy(x)
   value = MctsNode()
-  value.ls = ls
   value.x = x
   node = Tree(value)
 
   visited = Set{MctsNode}()
-  for i in 1:10^4
-    simulate_mcts(agent, world, reward, 
-                  state_d, ctrl_d, 
+  for i in 1:olm_mcts_iterations
+    simulate_mcts(agent, world, reward, ctrl_d, 
                   visited, node, depth)
   end
   
@@ -43,8 +38,8 @@ function plan_mcts(x::AbstractArray{Float64, 1}, agent::Agent, world::World,
 end
 
 function simulate_mcts(agent::Agent, world::World, reward::Function, 
-                       state_d::Discretization, ctrl_d::Discretization, 
-                       visited::Set{MctsNode}, node::Tree, depth::Int)
+                       ctrl_d::Discretization, visited::Set{MctsNode}, 
+                       node::Tree, depth::Int)
   if depth <= 0
     return 0.0
   end
@@ -61,12 +56,10 @@ function simulate_mcts(agent::Agent, world::World, reward::Function,
       sim.advance!(sim.default_dynamics!, nx, Pair(agent, world), 0.0, olm_dt, 
                    olm_h)
       nx[1] = mod(nx[1], world.road.path.S[end])
-      dis.clamp_x!(state_d, nx)
-      nls = dis.x2ls(state_d, nx)
 
       r = reward(node.value.x, u, nx, agent, world)
 
-      value = MctsNode(nls, nx, la, u, r)
+      value = MctsNode(nx, la, u, r)
       node.next[la + 1] = Tree(value)
     end
 
@@ -77,7 +70,7 @@ function simulate_mcts(agent::Agent, world::World, reward::Function,
   as = -1
   vs = -Inf
   for a in 1:length(node.next)
-    v = node.next[a].value.q + olm_mcts_c * sqrt(log(node.value.N) / 
+    v = node.next[a].value.q + olm_mcts_c * sqrt(log(node.value.Ns) / 
                                                  node.next[a].value.N)
     if v > vs
       vs = v
@@ -86,10 +79,12 @@ function simulate_mcts(agent::Agent, world::World, reward::Function,
   end
 
   las = node.next[as].value.la
-  q = simulate_mcts(agent, world, reward, state_d, ctrl_d, visited, 
+  q = simulate_mcts(agent, world, reward, ctrl_d, visited, 
                     node.next[as], depth - 1)
   node.next[as].value.N += 1
   node.next[as].value.q -= (q - node.next[as].value.q) / node.next[as].value.N
+
+  node.value.Ns += 1
 
   return q
 end

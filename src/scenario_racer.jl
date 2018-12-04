@@ -56,7 +56,9 @@ function discretize_fwds(world::World)
 end
 
 function reward(x, u, nx, agent, world)
-  return abs(nx[3]) > 0.35 * world.road.width ? -1e9 : nx[2]^3
+  return abs(x[3]) > 0.35 * world.road.width ? -1e9 : x[2]^3
+  #penalty = abs(x[3]) > 0.35 * world.road.width ? 1e9 * (exp(abs(x[3]) - 0.35 * world.road.width) - 1) : 0
+  #return x[2]^3 - penalty
 end
 
 function update_info(info::vis.InfoBox, agent::Agent, world::World, t::Float64)
@@ -165,7 +167,6 @@ function main()
   # ------------------------------------------------------------------------- #
 
   # MCTS Approach ----------------------------------------------------------- #
-  (state_d, _) = discretize_vit(world)
   ctrl_d = discretize_fwds(world)
   agent.controller! = olm.controller_mcts!
   # ------------------------------------------------------------------------- #
@@ -188,16 +189,16 @@ function main()
 
     for agent in world.agents
       # Forward Search Approach --------------------------------------------- #
-      #=
       @time plan = olm.replan_fwds(agent.x, agent, world, reward, ctrl_d, 4)
       agent.custom = plan.value.u
-      =#
       # --------------------------------------------------------------------- #
 
       # Forward Search Approach --------------------------------------------- #
-      @time us = olm.plan_mcts(agent.x, agent, world, reward, state_d, ctrl_d, 
-                               4)
+      #=
+      @time us = olm.plan_mcts(agent.x, agent, world, reward, ctrl_d, 5)
+      println(reward(agent.x, us, agent.x, agent, world))
       agent.custom = us
+      =#
       # --------------------------------------------------------------------- #
 
       ## advance one frame in time
