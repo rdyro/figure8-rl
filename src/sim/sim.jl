@@ -54,6 +54,10 @@ function default_dynamics!(dx::AbstractArray{Float64},
 
   s = mod(s, path.S[end])
   idx = binary_search(path.S, s)
+  if idx + 1 > length(path.R)
+    display(path.S[end])
+    display(s)
+  end
   R = path.R[idx]
   R1 = path.R[idx + 1]
   S = path.S[idx]
@@ -131,8 +135,9 @@ end
 
 function binary_search(sorted_x::Array{T}, el::T) where T
   a = 1
-  b = length(sorted_x)
-  if el >= sorted_x[b]
+  len = length(sorted_x)
+  b = len
+  if el > sorted_x[b]
     return b
   end
 
@@ -145,6 +150,7 @@ function binary_search(sorted_x::Array{T}, el::T) where T
     end
     m = div(a + b, 2)
   end
+  m = m == len ? m - 1 : m;
 
   return m
 end

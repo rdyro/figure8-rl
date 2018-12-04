@@ -1,5 +1,7 @@
 module dis
 
+export Discretization
+
 struct Discretization
   pt::AbstractArray{Int, 1}      # points per
   mi::AbstractArray{Float64, 1}  # minimum

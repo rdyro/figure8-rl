@@ -1,12 +1,14 @@
 dir_path = @__DIR__
 push!(LOAD_PATH, dir_path * "/sim") # simulation
 push!(LOAD_PATH, dir_path * "/vis") # visualization
-push!(LOAD_PATH, dir_path * "/mdp") # value iteration MDP
+push!(LOAD_PATH, dir_path * "/mdp") # fully observable MDP
 push!(LOAD_PATH, dir_path * "/dis") # discretization
+push!(LOAD_PATH, dir_path * "/olm") # online methods
 using sim
 using vis
 using mdp
 using dis
+using olm
 
 using Serialization
 using Printf
@@ -29,124 +31,32 @@ const max_acc = 5
 const min_ste = -1e-1
 const max_ste = 1e-1
 
-function discretize(world::World)
+function discretize_vit(world::World)
   max_s = world.road.path.S[end]
-  state_d = dis.Discretization([pts_per_s, pts_per_ds, pts_per_p],
-                               [min_s, min_ds, min_p],
-                               [max_s, max_ds, max_p])
-  ctrl_d = dis.Discretization([pts_per_acc, pts_per_ste],
-                              [min_acc, min_ste],
-                              [max_acc, max_ste])
+  state_d = Discretization([pts_per_s, pts_per_ds, pts_per_p],
+                           [min_s, min_ds, min_p],
+                           [max_s, max_ds, max_p])
+  ctrl_d = Discretization([pts_per_acc, pts_per_ste],
+                          [min_acc, min_ste],
+                          [max_acc, max_ste])
   return (state_d, ctrl_d)
 end
 
-
-
-function controllerd_interp!(u::AbstractArray{Float64},
-                             x::AbstractArray{Float64},
-                             dx::AbstractArray{Float64},
-                             agent_world::Pair{Agent, World}, t::Float64)
-  agent = agent_world.first
-  world = agent_world.second
-
-  P = agent.custom[1]
-  state_d = agent.custom[2]
-  ctrl_d = agent.custom[3]
-
-  x = copy(agent.x)
-  x[1] = mod(x[1], state_d.mx[1])
-  dis.clamp_x!(state_d, x)
-
-  # interpolate control
-  X = dis.bounding_X(state_d, x)
-  U1 = fill(0.0, length(X))
-  U2 = fill(0.0, length(X))
-  for i in 1:length(X)
-    ls = dis.x2ls(state_d, X[i])
-    lu = P.S[ls].a[P.Aidx[ls]]
-    uv = dis.ls2x(ctrl_d, lu)
-    U1[i] = uv[1]
-    U2[i] = uv[2]
-  end
-  u[1] = dis.interp(X, x, U1)
-  u[2] = dis.interp(X, x, U2)
+function discretize_fwds(world::World)
+  pts_per_acc = 3
+  pts_per_ste = 3
+  min_acc = -15
+  max_acc = 5
+  min_ste = -1e-1
+  max_ste = 1e-1
+  ctrl_d = Discretization([pts_per_acc, pts_per_ste],
+                          [min_acc, min_ste],
+                          [max_acc, max_ste])
+  return ctrl_d
 end
 
-function controllerd_train!(u::AbstractArray{Float64},
-                            x::AbstractArray{Float64},
-                            dx::AbstractArray{Float64},
-                            agent_world::Pair{Agent, World}, t::Float64)
-  agent = agent_world.first
-  world = agent_world.second
-
-  ctrl_d = agent.custom[3]
-  lu = agent.custom[4]
-  agent_u = dis.ls2x(ctrl_d, lu)
-
-  u[1] = agent_u[1]
-  u[2] = agent_u[2]
-end
-
-function dynamicsd!(dx::AbstractArray{Float64},
-                    x::AbstractArray{Float64},
-                    agent_world::Pair{Agent, World}, t::Float64)
-
-  agent = agent_world.first
-  world = agent_world.second
-
-
-  state_d = agent.custom[2]
-  sim.default_dynamics!(dx, x, agent_world, t)
-
-  x[1] = mod(x[1], state_d.mx[1])
-  dis.clamp_x!(state_d, x)
-end
-
-function reward(world, agent, x, a, nx)
+function reward(world, agent, x, u, nx)
   return abs(nx[3]) > 0.35 * world.road.width ? -1e9 : nx[2]^3
-end
-
-
-const dt = 1.5 # time increment for planning
-const step_h = 1e-1 # dt for numerical integration
-function make_MDP(world::World)
-  @assert length(world.agents) == 1
-  agent = world.agents[1]
-  agent.controller! = controllerd_train!
-
-  (state_d, ctrl_d) = discretize(world)
-
-  S = Dict{Int, DetState}()
-  for s in 0:(prod(state_d.pt) - 1)
-    a = collect(0:(prod(ctrl_d.pt) - 1))
-    a2r = fill(0.0, length(a))
-    ns = fill(-1, length(a))
-
-    xd = dis.ls2xd(state_d, s)
-    x = dis.xd2x(state_d, xd)
-
-    for i in 1:length(a)
-      nx = copy(x)
-      lu = a[i]
-      agent.custom = (nothing, state_d, ctrl_d, lu)
-      #println("Before = $(nx)")
-      advance!(agent.dynamics!, nx, Pair(agent, world), 0.0, dt, step_h)
-      #println("After  = $(nx)")
-
-      # enforce max values
-      dis.clamp_x!(state_d, nx)
-      nxd = dis.x2xd(state_d, nx)
-      ns[i] = dis.xd2ls(state_d, nxd)
-
-      a2r[i] = reward(world, agent, x, a[i], nx)
-    end
-
-    S[s] = DetState(a, a2r, ns)
-  end
-
-  agent.controller! = sim.default_controller!
-
-  return S
 end
 
 function update_info(info::vis.InfoBox, agent::Agent, world::World, t::Float64)
@@ -205,19 +115,18 @@ function main()
   road.road.T = vis.scale_mat(vis_scaling, vis_scaling)
 
   # make the world
-  global world = World(road, [], vis_scaling)
+  world = World(road, [], vis_scaling)
 
   # make the agents
   agent = Agent(1, [0.0; 0.0; 0], vis.make_car(context))
-  vis.car_lights!(agent.car, false)
-  agent.controller! = controllerd_interp!
-  agent.dynamics! = dynamicsd!
   push!(world.agents, agent)
 
+  # Value Iteration Approach ------------------------------------------------ #
   # read in, iterate and store the policy
-  global P = nothing
+  #=
+  P = nothing
   S = nothing
-  global (state_d, ctrl_d) = discretize(world)
+  (state_d, ctrl_d) = discretize_vit(world) # value iteration
 
   policy_file_path = dir_path * "/../data/fr_vi_policy.bin"
 
@@ -231,7 +140,7 @@ function main()
 
     S = P.S
   else
-    S = make_MDP(world)
+    S = mdp.make_MDP(agent, world, reward, state_d, ctrl_d)
     P = Policy(S, 0.999)
   end
   for i in 1:repeat
@@ -243,8 +152,15 @@ function main()
   close(fp)
 
   # switch agent's trained controller on
-  agent.controller! = controllerd_interp!
+  agent.controller! = mdp.controllerd_interp!
   agent.custom = (P, state_d, ctrl_d)
+  =#
+  # ------------------------------------------------------------------------- #
+
+  # Forward Search Approach ------------------------------------------------- #
+  ctrl_d = discretize_fwds(world)
+  agent.controller! = olm.controller_fwds!
+  # ------------------------------------------------------------------------- #
 
   # make diagnostics render objects
   info = vis.InfoBox(context, 0.75, 0.75, vis_scaling)
@@ -263,6 +179,11 @@ function main()
     end
 
     for agent in world.agents
+      # Forward Search Approach --------------------------------------------- #
+      @time plan = olm.replan(agent.x, agent, world, reward, ctrl_d, 4)
+      agent.custom = plan.value.u
+      # --------------------------------------------------------------------- #
+
       ## advance one frame in time
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
       update_info(info, agent, world, t)

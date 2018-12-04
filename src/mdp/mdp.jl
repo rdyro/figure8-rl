@@ -327,4 +327,7 @@ function write_policy(name::AbstractString, p::Policy)
 end
 ###############################################################################
 
+dir = @__DIR__
+include(dir * "/mdp_vit.jl")
+
 end
