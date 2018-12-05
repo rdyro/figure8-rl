@@ -24,8 +24,8 @@ function plan_mcts(x::AbstractArray{Float64, 1}, agent::Agent, world::World,
 
   visited = Set{MctsNode}()
   for i in 1:olm_mcts_iterations
-    simulate_mcts(node, agent, world, reward, 
-                  ctrl_d, visited, depth)
+    simulate_mcts(agent, world, reward, ctrl_d, 
+                  visited, node, depth)
   end
   
   us = Float64[]
@@ -40,9 +40,9 @@ function plan_mcts(x::AbstractArray{Float64, 1}, agent::Agent, world::World,
   return us
 end
 
-function simulate_mcts(node::Tree, agent::Agent, world::World, 
-                       reward::Function, ctrl_d::Discretization, 
-                       visited::Set{MctsNode}, depth::Int)
+function simulate_mcts(agent::Agent, world::World, reward::Function, 
+                       ctrl_d::Discretization, visited::Set{MctsNode}, 
+                       node::Tree, depth::Int)
   if depth <= 0
     return 0.0
   end
@@ -86,8 +86,8 @@ function simulate_mcts(node::Tree, agent::Agent, world::World,
   nx = node.next[as].value.x
   r = reward(x, u, nx, agent, world)
 
-  q = r + olm_gamma * simulate_mcts(node.next[as], agent, world, reward, 
-                                    ctrl_d, visited, depth - 1)
+  q = r + olm_gamma * simulate_mcts(agent, world, reward, ctrl_d, visited, 
+                                    node.next[as], depth - 1)
   # update Qsa for fuck's sake ---------------------------------------------- #
   #dq = (q - node.next[as].value.q)
   #node.next[as].value.q += dq / node.next[as].value.N
