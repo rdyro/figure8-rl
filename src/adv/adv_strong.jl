@@ -4,7 +4,7 @@ include_dependency(dir * "/../sim/sim.jl")
 using sim
 using adv
 
-function agro_controller!(u::AbstractArray{Float64},
+function strong_controller!(u::AbstractArray{Float64},
 														 x::AbstractArray{Float64},
 														 dx::AbstractArray{Float64},
 														 agent_world::Pair{Agent, World}, t::Float64)

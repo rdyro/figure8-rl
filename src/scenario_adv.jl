@@ -70,11 +70,11 @@ function main()
 	len_rd = path.S[end]
 
   # make the agents
-  agent = Agent(1, [len_rd / 2 - 50.0; 0.0; 0], vis.make_car(context))
-	agent.controller! = adv.meek_controller!
+  agent = Agent(1, [len_rd / 2 - 50.0; 15.0; 0], vis.make_car(context))
+	agent.controller! = adv.weak_controller!
 
-	agent2 = Agent(2, [len_rd - 50.0; 0.0; 0.0], vis.make_car(context))
-	agent2.controller! = adv.agro_controller!
+	agent2 = Agent(2, [len_rd - 50.0; 15.0; 0.0], vis.make_car(context))
+	agent2.controller! = adv.strong_controller!
 
   push!(world.agents, agent)
   push!(world.agents, agent2)

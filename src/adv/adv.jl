@@ -3,8 +3,9 @@ dir = @__DIR__
 
 using LinearAlgebra
 
-include(dir * "/adv_meek.jl")
-include(dir * "/adv_agro.jl")
+include(dir * "/adv_weak.jl")
+include(dir * "/adv_strong.jl")
+include(dir * "/adv_medium.jl")
 
 export parametrize, closest_approach
 

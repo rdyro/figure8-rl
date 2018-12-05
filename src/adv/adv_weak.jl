@@ -4,7 +4,7 @@ include_dependency(dir * "/../sim/sim.jl")
 using sim
 using adv
 
-function meek_controller!(u::AbstractArray{Float64},
+function weak_controller!(u::AbstractArray{Float64},
 														 x::AbstractArray{Float64},
 														 dx::AbstractArray{Float64},
 														 agent_world::Pair{Agent, World}, t::Float64)
@@ -13,6 +13,8 @@ function meek_controller!(u::AbstractArray{Float64},
 	target_v = world.road.path.S[end] / 15 # target velocity is around the track in 15 seconds
 
 	collision_detected = false
+	min_d = Inf
+	min_t = Inf
 	
 	for agent in world.agents
 		if agent.id == agent_world.first.id
@@ -27,26 +29,27 @@ function meek_controller!(u::AbstractArray{Float64},
 
 		P_agent = parametrize(agent.x, dx_agent, world)
 
-		(dist, t_closest) = closest_approach(P_self, P_agent)
+		(r, t_closest) = closest_approach(P_self, P_agent)
+		d = norm([P_self[1,1] + P_self[1,2]*t_closest,
+							P_self[2,1] + P_self[2,2]*t_closest])
 		
-		if dist < 5.0 && 0.0 < t_closest < 5.0 # Criteria for detected collision
+		if r < 5.0 && 0.0 < t_closest < 5.0 # Criteria for detected collision
 			collision_detected = true
-			break
+
+			if d < min_d
+				min_d = d
+				min_t = t_closest
+			end
 		end
 	end
 
 	if collision_detected
-		if x[2] > 0.0
-			u[1] = -0.7 * x[2] # Reduce velocity by 20%
-				
-		else
-			u[1] = 0.2 * x[2] # For if car is going backwards idk why it would
-		end
+		u[1] = -1 * x[2] # Reduce velocity by 20%
 	else
 		u[1] = 0.1 * (target_v - x[2])
 	end
 
-	u[2] = -1*x[3] / dx[1]
+	u[2] = -1 * x[3] / dx[1]
 
 	return
 end
