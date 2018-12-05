@@ -12,14 +12,14 @@ function plan_fwds(x::AbstractArray{Float64, 1}, agent::Agent, world::World,
   root = Tree(FwdsNode(x))
   plan = root
 
-  select_action_fwds(x, agent, world, reward, ctrl_d, root, depth)
+  select_action_fwds(root, agent, world, reward, ctrl_d, depth)
 
   return plan.value.u
 end
 
-function select_action_fwds(x::AbstractArray{Float64, 1}, agent::Agent, 
-                            world::World, reward::Function, 
-                            ctrl_d::Discretization, node::Tree, depth::Int)
+function select_action_fwds(node::Tree, agent::Agent, world::World, 
+                            reward::Function, ctrl_d::Discretization, 
+                            depth::Int)
   if depth <= 0
     return 0.0
   end
@@ -28,24 +28,24 @@ function select_action_fwds(x::AbstractArray{Float64, 1}, agent::Agent,
   las = -1
   us = Float64[]
 
-  x[1] = mod(x[1], world.road.path.S[end])
+  node.value.x[1] = mod(node.value.x[1], world.road.path.S[end])
 
   la_len = ctrl_d.thr[end] * ctrl_d.pt[end] # number of actions to survey
   node.next = Array{Tree, 1}(undef, la_len)
   for la in 0:(la_len - 1)
     u = dis.ls2x(ctrl_d, la)
     agent.custom = u
-    nx = copy(x)
+    nx = copy(node.value.x)
     sim.advance!(sim.default_dynamics!, nx, Pair(agent, world), 0.0, olm_dt, 
                  olm_h)
 
     value = FwdsNode(nx)
     node.next[la + 1] = Tree(value)
 
-    next_r = select_action_fwds(nx, agent, world, reward, ctrl_d, 
-                                node.next[la + 1], depth - 1)
+    next_r = select_action_fwds(node.next[la + 1], agent, world, reward, 
+                                ctrl_d, depth - 1)
 
-    r = reward(x, u, nx, agent, world) + olm_gamma * next_r
+    r = reward(node.value.x, u, nx, agent, world) + olm_gamma * next_r
     if r > max_r
       max_r = r
       las = la
