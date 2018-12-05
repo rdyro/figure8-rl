@@ -108,29 +108,19 @@ function predict_collision(agent_self::Agent,
 
 	if norm(c_v) < 6.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
 		if -pi / 2 < th_collision < pi / 2
-			collision_type = 1
+			collision_type = HITTING
 		else
-			collision_type = 2
+			collision_type = BEING_HIT
 		end
 	end
 
 	# Compute distance of self to collision
 	d = norm(vc_self)
 
-	return (collision_type, d)
+	return (d, t_c, collision_type)
 
 end
-
+const HITTING = 1
+const BEING_HIT = 2
 
 end
-
-
-
-
-
-
-
-
-
-
-
