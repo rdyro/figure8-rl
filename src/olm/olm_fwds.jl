@@ -7,14 +7,14 @@ mutable struct FwdsNode
   FwdsNode() = new(Float64[], 0.0, Float64[])
 end
 
-function replan_fwds(x::AbstractArray{Float64, 1}, agent::Agent, world::World, 
-                     reward::Function, ctrl_d::Discretization, depth::Int)
+function plan_fwds(x::AbstractArray{Float64, 1}, agent::Agent, world::World, 
+                   reward::Function, ctrl_d::Discretization, depth::Int)
   root = Tree(FwdsNode(x))
   plan = root
 
   select_action_fwds(x, agent, world, reward, ctrl_d, root, depth)
 
-  return plan
+  return plan.value.u
 end
 
 function select_action_fwds(x::AbstractArray{Float64, 1}, agent::Agent, 

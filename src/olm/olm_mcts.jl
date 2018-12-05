@@ -1,3 +1,6 @@
+const olm_mcts_c = 1e5 # exploration parameter for MCTS
+const olm_mcts_iterations = 1000 # exploration parameter for MCTS
+
 mutable struct MctsNode
   x::AbstractArray{Float64, 1}
   la::Int
@@ -78,12 +81,27 @@ function simulate_mcts(agent::Agent, world::World, reward::Function,
     end
   end
 
-  las = node.next[as].value.la
-  q = simulate_mcts(agent, world, reward, ctrl_d, visited, 
-                    node.next[as], depth - 1)
-  node.next[as].value.N += 1
-  node.next[as].value.q -= (q - node.next[as].value.q) / node.next[as].value.N
+  x = node.value.x
+  u = node.next[as].value.u
+  nx = node.next[as].value.x
+  r = reward(x, u, nx, agent, world)
 
+  q = r + olm_gamma * simulate_mcts(agent, world, reward, ctrl_d, visited, 
+                                    node.next[as], depth - 1)
+  # update Qsa for fuck's sake ---------------------------------------------- #
+  #dq = (q - node.next[as].value.q)
+  #node.next[as].value.q += dq / node.next[as].value.N
+
+  # this works best BY FAR
+  node.next[as].value.q = max(q, node.next[as].value.q)
+
+  #alpha = 0.5
+  #Qsa = node.next[as].value.q
+  #Qsa = Qsa * (1 - alpha) + q * alpha
+  #node.next[as].value.q = Qsa
+  # ------------------------------------------------------------------------- #
+
+  node.next[as].value.N += 1
   node.value.Ns += 1
 
   return q
@@ -106,9 +124,9 @@ function rollout(x::AbstractArray{Float64, 1}, agent::Agent,
   nx = copy(x)
   sim.advance!(sim.default_dynamics!, nx, Pair(agent, world), 0.0, olm_dt, 
                olm_h)
-  q = reward(x, u, nx, agent, world)
+  r = reward(x, u, nx, agent, world)
 
-  return q + olm_gamma * rollout(nx, agent, world, reward, ctrl_d, depth - 1)
+  return r + olm_gamma * rollout(nx, agent, world, reward, ctrl_d, depth - 1)
 end
 
 function controller_mcts!(u::AbstractArray{Float64}, 

@@ -120,12 +120,15 @@ function main()
   world = World(road, [], vis_scaling)
 
   # make the agents
-  agent = Agent(1, [0.0; 0.0; 0], vis.make_car(context))
-  push!(world.agents, agent)
+  agent1 = Agent(1, [0.0; 0.0; 0], vis.make_car(context))
+  push!(world.agents, agent1)
+  agent2 = Agent(2, [0.0; 0.0; 0], vis.make_car(context, [1.0, 0.0, 0.0]))
+  push!(world.agents, agent2)
+  agent3 = Agent(3, [0.0; 0.0; 0], vis.make_car(context, [0.0, 1.0, 0.0]))
+  push!(world.agents, agent3)
 
   # Value Iteration Approach ------------------------------------------------ #
   # read in, iterate and store the policy
-  #=
   P = nothing
   S = nothing
   (state_d, ctrl_d) = discretize_vit(world) # value iteration
@@ -142,7 +145,7 @@ function main()
 
     S = P.S
   else
-    S = mdp.make_MDP(agent, world, reward, state_d, ctrl_d)
+    S = mdp.make_MDP(agent1, world, reward, state_d, ctrl_d)
     P = Policy(S, 0.999)
   end
   for i in 1:repeat
@@ -154,25 +157,25 @@ function main()
   close(fp)
 
   # switch agent's trained controller on
-  agent.controller! = mdp.controllerd_interp!
-  agent.custom = (P, state_d, ctrl_d)
-  =#
+  agent1.controller! = mdp.controllerd_interp!
+  agent1.custom = (P, state_d, ctrl_d)
   # ------------------------------------------------------------------------- #
 
   # Forward Search Approach ------------------------------------------------- #
-  #=
   ctrl_d = discretize_fwds(world)
-  agent.controller! = olm.controller_fwds!
-  =#
+  agent2.controller! = olm.controller_fwds!
   # ------------------------------------------------------------------------- #
 
   # MCTS Approach ----------------------------------------------------------- #
   ctrl_d = discretize_fwds(world)
-  agent.controller! = olm.controller_mcts!
+  agent3.controller! = olm.controller_mcts!
   # ------------------------------------------------------------------------- #
 
   # make diagnostics render objects
-  info = vis.InfoBox(context, 0.75, 0.75, vis_scaling)
+  info1 = vis.InfoBox(context, 0.4, 0.75, vis_scaling)
+  info2 = vis.InfoBox(context, 1.0, 0.75, vis_scaling)
+  info3 = vis.InfoBox(context, -0.4, -0.35, vis_scaling)
+  infos = [info1, info2, info3]
 
   # main loop for rendering and simulation
   window = true
@@ -189,21 +192,25 @@ function main()
 
     for agent in world.agents
       # Forward Search Approach --------------------------------------------- #
-      @time plan = olm.replan_fwds(agent.x, agent, world, reward, ctrl_d, 4)
-      agent.custom = plan.value.u
+      if agent.id == 2
+        print("FWDS: ")
+        @time u = olm.plan_fwds(agent.x, agent, world, reward, ctrl_d, 3)
+        agent.custom = u
+      end
       # --------------------------------------------------------------------- #
 
-      # Forward Search Approach --------------------------------------------- #
-      #=
-      @time us = olm.plan_mcts(agent.x, agent, world, reward, ctrl_d, 5)
-      println(reward(agent.x, us, agent.x, agent, world))
-      agent.custom = us
-      =#
+      # MCTS Approach ------------------------------------------------------- #
+      if agent.id == 3
+        print("MCTS: ")
+        @time us = olm.plan_mcts(agent.x, agent, world, reward, ctrl_d, 4)
+        agent.custom = us
+      end
       # --------------------------------------------------------------------- #
 
       ## advance one frame in time
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
-      update_info(info, agent, world, t)
+      update_info(infos[agent.id], agent, world, t)
+      push!(to_visualize, infos[agent.id])
 
       ## visualize
       (x, y, sx, sy, dx, u) = diagnostic(agent, world, t)
@@ -223,7 +230,6 @@ function main()
         push!(to_visualize, agent.car)
       end
     end
-    push!(to_visualize, info)
 
     window = vis.visualize(context, to_visualize)
 
