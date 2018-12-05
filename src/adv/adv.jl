@@ -3,11 +3,11 @@ dir = @__DIR__
 
 using LinearAlgebra
 
-include(dir * "/adv_weak.jl")
+include(dir * "/adv_weak_v2.jl")
 include(dir * "/adv_strong.jl")
-include(dir * "/adv_medium.jl")
+# include(dir * "/adv_medium.jl")
 
-export parametrize, closest_approach
+export predict_collision
 
 function empty_controller!(x::AbstractArray{Float64},
 													 u::AbstractArray{Float64},
@@ -22,7 +22,7 @@ function parametrize(x::AbstractArray{Float64},
                         world::World)
 
   (sx, sy) = sim.sp2sxsy(x[1], x[3], world.road.path)
-  th = atan(sy, sx)
+	th = atan(sy, sx)
 
   s = mod(x[1], world.road.path.S[end])
   ds = x[2]
@@ -37,12 +37,12 @@ function parametrize(x::AbstractArray{Float64},
   a_x = dds*cos(th)
   a_y = dds*sin(th)
 
-  (x, y) = sim.sp2xy(s, p, world.road.path)
+  (x_pos, y_pos) = sim.sp2xy(s, p, world.road.path)
   
-  P = [x v_x a_x/2;
-       y v_y a_y/2]
+  P = [x_pos v_x a_x/2;
+       y_pos v_y a_y/2]
 
-  return P
+	return (P, th)
 end
 
 
@@ -62,10 +62,75 @@ function closest_approach(p1::AbstractArray{Float64}, p2::AbstractArray{Float64}
   v1 = [a + b*t, d + y*t]
   v2 = [g + h*t, z + k*t]
 
-  dist = norm(v1 - v2)
+  return (v1, v2, t)
+end
 
-  return (dist, t)
+function predict_collision(agent_self::Agent,
+													agent_opp::Agent,
+													world::World,
+													time::Float64)
+	# Parametrize both agents
+	# Compute closest approach
+	# Compute Collision angle
+	# Return r, t, c_th, collision_type
+	# Predicted Collision Types:
+	# 0 - No collision detected
+	# 1 - agent_self crashes into agent_opp
+	# 2 - agent_self is crashed into by agent opp
+	
+	# Compute dx for each agent
+	dx_self = fill(0.0, 3)
+	f_self = agent_self.controller!
+	agent_self.controller! = empty_controller!
+	agent_self.dynamics!(dx_self, agent_opp.x, Pair(agent_self, world), time)
+	agent_self.controller! = f_self
+	
+	dx_opp = fill(0.0, 3)
+	f_opp = agent_opp.controller!
+	agent_opp.controller! = empty_controller!
+	agent_opp.dynamics!(dx_opp, agent_opp.x, Pair(agent_opp, world), time)
+	agent_opp.controller! = f_opp
+
+	# Parametrize both agents
+	(P_self, th_self) = parametrize(dx_self, agent_self.x, world)
+	(P_opp, th_opp) = parametrize(dx_opp, agent_opp.x, world)
+
+	# Compute Closest approach collision
+	(vc_self, vc_opp, t_c) = closest_approach(P_self, P_opp)
+
+	c_v = vc_opp - vc_self
+
+	# Compute collision angle
+	th_collision = th_self - atan(c_v[2], c_v[1])
+	
+	# Determine collision type
+	collision_type = 0
+
+	if norm(c_v) < 6.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
+		if -pi / 2 < th_collision < pi / 2
+			collision_type = 1
+		else
+			collision_type = 2
+		end
+	end
+
+	# Compute distance of self to collision
+	d = norm(vc_self)
+
+	return (collision_type, d)
+
 end
 
 
 end
+
+
+
+
+
+
+
+
+
+
+
