@@ -1,8 +1,13 @@
-\begin{thebibliography}{}
+\begin{thebibliography}{1}
 \expandafter\ifx\csname url\endcsname\relax
   \def\url#1{\texttt{#1}}\fi
 \expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
 \providecommand{\bibinfo}[2]{#2}
 \providecommand{\eprint}[2][]{\url{#2}}
+
+\bibitem{koch}
+\bibinfo{author}{Kochenderfer, M.~J.}
+\newblock \emph{\bibinfo{title}{Decision making under uncertainty: theory and
+  application}} (\bibinfo{publisher}{MIT press}, \bibinfo{year}{2015}).
 
 \end{thebibliography}
