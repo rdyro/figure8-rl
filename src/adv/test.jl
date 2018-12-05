@@ -8,7 +8,7 @@ using sim
 using vis
 using adv
 
-include("adv_meek.jl")
+include("adv_weak.jl")
 
 function main()
 	vis_scaling = 0.01

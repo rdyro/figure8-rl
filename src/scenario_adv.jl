@@ -70,18 +70,21 @@ function main()
 	len_rd = path.S[end]
 
   # make the agents
-  agent = Agent(1, [len_rd / 2 - 50.0; 15.0; 0], vis.make_car(context))
-	agent.controller! = adv.weak_controller!
+  x01 = [len_rd / 2 - 50.0; 15.0; 0]
+  agent1 = Agent(1, copy(x01), vis.make_car(context, [0.0, 1.0, 0.0]))
+	agent1.controller! = adv.weak_controller!
 
-	agent2 = Agent(2, [len_rd - 50.0; 15.0; 0.0], vis.make_car(context))
+  x02 = [len_rd - 50.0; 15.0; 0.0]
+  agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
 	agent2.controller! = adv.strong_controller!
 
-  push!(world.agents, agent)
+  push!(world.agents, agent1)
   push!(world.agents, agent2)
   # ------------------------------------------------------------------------- #
 
   # make diagnostics render objects
-  info = vis.InfoBox(context, 0.75, 0.75, vis_scaling)
+  info1 = vis.InfoBox(context, 0.75, 0.75, vis_scaling)
+  info2 = vis.InfoBox(context, -0.75, -0.25, vis_scaling)
 
   # main loop for rendering and simulation
   window = true
@@ -96,13 +99,23 @@ function main()
       push!(to_visualize, world.road.road)
     end
 
+    if mod(agent2.x[1], road.path.S[end]) < 250.0 && 
+      mod(agent2.x[1], path.S[end]) > 100.0
+      agent1.x = copy(x01)
+      agent2.x = copy(x02)
+
+      println("Resetting")
+    end
+
     for agent in world.agents
+
       ## advance one frame in time
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
 			if agent.id == 1
-      	update_info(info, agent, world, t)
-			end
-
+      	update_info(info1, agent, world, t)
+      else
+      	update_info(info2, agent, world, t)
+      end
 
       ## visualize
       (x, y, sx, sy, dx, u) = diagnostic(agent, world, t)
@@ -122,7 +135,8 @@ function main()
         push!(to_visualize, agent.car)
       end
     end
-    push!(to_visualize, info)
+    push!(to_visualize, info1)
+    push!(to_visualize, info2)
 
     window = vis.visualize(context, to_visualize)
 
