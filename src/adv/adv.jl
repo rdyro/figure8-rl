@@ -9,6 +9,17 @@ include(dir * "/adv_strong.jl")
 
 export predict_collision
 
+const TRACKING = 0
+const BRAKING = 1
+const ACCELERATING = 2
+
+const NO_COLLISION = 0
+const HITTING = 1
+const BEING_HIT = 2
+
+const replan_time = 0.5 # Replan controllers every quarter of a second
+
+
 function empty_controller!(x::AbstractArray{Float64},
 													 u::AbstractArray{Float64},
 													 dx::AbstractArray{Float64},
@@ -104,7 +115,7 @@ function predict_collision(agent_self::Agent,
 	th_collision = th_self - atan(c_v[2], c_v[1])
 	
 	# Determine collision type
-	collision_type = 0
+	collision_type = NO_COLLISION
 
 	if norm(c_v) < 10.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
 		if -pi / 2 < th_collision < pi / 2
@@ -120,7 +131,9 @@ function predict_collision(agent_self::Agent,
 	return (d, t_c, collision_type)
 
 end
-const HITTING = 1
-const BEING_HIT = 2
+
+
+
+
 
 end

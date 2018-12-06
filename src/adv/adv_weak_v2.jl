@@ -4,6 +4,8 @@ include_dependency(dir * "/../sim/sim.jl")
 using sim
 using adv
 
+using Printf
+
 function weak_controller!(u::AbstractArray{Float64},
 														 x::AbstractArray{Float64},
 														 dx::AbstractArray{Float64},
@@ -16,7 +18,19 @@ function weak_controller!(u::AbstractArray{Float64},
 	agent_pred_collision = -1
 	c_type_closest = 0
 
-	# if agent_self.custom < t
+	# If its not time to REPLAN then continue doing what you are doing
+	if agent_self.custom.second > t
+		if agent_self.custom.first == TRACKING
+			u[1] = 0.0
+		elseif agent_self.custom.first == BRAKING
+			u[1] = 0.0
+		elseif agent_self.custom.first == ACCELERATING
+			u[1] = 0.0
+		end
+		u[2] = 0.0
+
+		return
+	end
 
 	# Check for collisions with all other agents
 	# If collisions are detected then get the closest one to the agent 
@@ -34,11 +48,13 @@ function weak_controller!(u::AbstractArray{Float64},
 		end
 	end
 
-	if c_type_closest != 0
+	if c_type_closest != NO_COLLISION
 		# u[1] = -5 * x[2] # Reduce acceleration by 20%
+		agent_self.custom = (BRAKING, t + replan_time)
 		u[1] = 0.0
-		print("colliding \n")
+		@printf("[COLLISION DETECTED] Distance: %d", d_min)
 	else
+		agent_self.custom = (TRACKING, t + replan_time)
 		# u[1] = 0.1 * (target_v - x[2])
 		u[1] = 0.0
 		print("not colliding \n")
