@@ -61,7 +61,7 @@ function main()
   x02 = [len_rd / 2 - 50.0; 25.0; 0]
   agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
 	agent2.controller! = pomdp.adv_controller!
-	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.WEAK]
+	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.STRONG]
 
   push!(world.agents, agent1)
   push!(world.agents, agent2)
@@ -79,7 +79,8 @@ function main()
   t0 = time_ns()
   oldt = (time_ns() - t0) / 1e9
 
-  b = fill(1 / length(pomdp.DRIVERS), length(DRIVERS))
+  b = fill(1 / length(pomdp.DRIVERS), length(pomdp.DRIVERS))
+  frame = 0
   while window
     t = (time_ns() - t0) / 1e9
 
@@ -93,17 +94,25 @@ function main()
       agent1.x = copy(x01)
       agent2.x = copy(x02)
 
+      b = fill(1 / length(pomdp.DRIVERS), length(pomdp.DRIVERS))
       println("RESETTING")
+      println(b)
     end
-    (c, _) = adv.predict_collision(
 
     for agent in world.agents
       cv = nothing
       if agent.id == 2
         (agent.custom[3], cv) = adv.replan_adv(agent, world)
-        (c, _) = predict_collision(agent2.x, agent1.x, world)
-        update_belief
+        if mod(frame, 30) == 0
+          (c, _) = predict_collision(agent2.x, agent1.x, world)
+          b = pomdp.update_belief(b, agent.custom[3], c)
+          println(b)
+
+          frame = 0
+        end
+        frame += 1
       end
+
 
       ## advance one frame in time
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)

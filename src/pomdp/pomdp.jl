@@ -36,7 +36,7 @@ function reward(x, u, nx, agent, world)
 end
 
 function P_adv(o::Enum, c::Collision, s::Enum)
-  if c != NO_COLLISION
+  if c.ctype != NO_COLLISION
     P = 0.0
     if s == WEAK
       P = o == BRAKE ? 0.9 : P
@@ -71,6 +71,7 @@ end
 function update_belief(b::AbstractArray{Float64, 1}, o::Enum, c::Collision)
   bp = similar(b)
   for i in 1:length(b)
+    #println("i -> $(i), b[i] -> $(b[i]), P -> $(P_adv(o, c, DRIVERS[i]))")
     bp[i] = b[i] * P_adv(o, c, DRIVERS[i])
   end
   bp ./= sum(bp)
