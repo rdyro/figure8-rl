@@ -116,8 +116,8 @@ function predict_collision(x_self::Array{Float64},
 	(x, y) = sim.sp2xy(x_self[1], x_self[3], world.road.path)
 
 	cv = [0.0, 0.0]
-	cv[1] = vc_self[1] - x
-	cv[2] = vc_self[2] - y
+	cv[1] = vc_self[1]
+	cv[2] = vc_self[2]
 	rv = vc_self - vc_opp
 
 	# Compute collision angle
