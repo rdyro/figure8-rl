@@ -19,6 +19,7 @@ end
 function plan_pofs(x::AbstractArray{Float64, 1}, b::AbstractArray{Float64, 1}, 
                    agent::Agent, adv_agent::Agent, world::World, 
                    reward::Function, ctrl_d::Discretization, depth::Int)
+  println(b)
   # backup variables
   adv_agent_controller! = adv_agent.controller!
   adv_agent_custom = adv_agent.custom
@@ -38,10 +39,14 @@ function plan_pofs(x::AbstractArray{Float64, 1}, b::AbstractArray{Float64, 1},
 
   rs = select_action_pofs(root, agent, adv_agent, world, reward, ctrl_d, depth)
   us = Float64[]
+  ret = nothing
   for node_obs in root.next
     for node in node_obs 
       if node.value.r >= rs
         us = node.value.u
+        root.value.u = us
+        root.value.r = rs
+        ret = root
       end
     end
   end
@@ -54,7 +59,7 @@ function plan_pofs(x::AbstractArray{Float64, 1}, b::AbstractArray{Float64, 1},
     error("Action empty, error in POFS")
   end
 
-  return (us, root)
+  return (us, ret)
 end
 
 function select_action_pofs(node::GroupTree, agent::Agent, adv_agent::Agent, 

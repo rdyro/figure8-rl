@@ -82,6 +82,7 @@ function main()
   oldt = (time_ns() - t0) / 1e9
 
   frame = 0
+  boop = false
   while window
     t = (time_ns() - t0) / 1e9
 
@@ -102,11 +103,20 @@ function main()
     for agent in world.agents
       cv = nothing
       if agent.id == 1
-        (u, plan) = olm.plan_pofs(agent1.x, b, agent1, agent2, world, pomdp.reward,
+        global (u, ret) = olm.plan_pofs(agent1.x, b, agent1, agent2, world, pomdp.reward,
                           ctrl_d, 3)
         agent1.custom = u
+        #(agent1.custom, _) = predict_collision(agent1.x, agent2.x, world)
+        #println(pomdp.reward(agent1.x, u, agent1.x, agent1, world))
+        #agent1.custom = u
       elseif agent.id == 2
-        (agent.custom[3], cv) = adv.replan_adv(agent, world)
+        (o, cv) = adv.replan_adv(agent, world)
+        agent.custom[3] = o
+        (c, cv) = predict_collision(agent2.x, agent1.x, world)
+        b = pomdp.update_belief(b, o, c)
+        if c.ctype != pomdp.NO_COLLISION
+          boop = false
+        end
         #=
         if mod(frame, 30) == 0
           (c, _) = predict_collision(agent2.x, agent1.x, world)
@@ -157,5 +167,8 @@ function main()
     window = vis.visualize(context, to_visualize)
 
     oldt = t
+    if boop == true
+      return
+    end
   end
 end
