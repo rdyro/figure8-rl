@@ -15,6 +15,7 @@ struct Collision
   t::Float64
   ctype::Enum
 
+  Collision(d, t, ctype) = new(d, t, ctype)
   Collision() = new(0.0, 0.0, NO_COLLISION)
 end
 
@@ -35,27 +36,29 @@ function reward(x, u, nx, agent, world)
 end
 
 function P_adv(o::Enum, c::Collision, s::Enum)
-  if c.d <= max_d && c.t >= 0.0 && c.t <= max_t
+  if c != NO_COLLISION
     P = 0.0
     if s == WEAK
-      P = o == BRAKE ? 0.9 : 0.0
-      P = o == ACC ? 0.05 : 0.0
-      P = o == NOTHING ? 0.05 : 0.0
+      P = o == BRAKE ? 0.9 : P
+      P = o == ACC ? 0.05 : P
+      P = o == NOTHING ? 0.05 : P
     elseif s == MEDIUM
       if c.ctype == HITTING
-        P = o == BRAKE ? 0.9 : 0.0
-        P = o == ACC ? 0.05 : 0.0
-        P = o == NOTHING ? 0.05 : 0.0
+        P = o == BRAKE ? 0.9 : P
+        P = o == ACC ? 0.05 : P
+        P = o == NOTHING ? 0.05 : P
       elseif c.ctype == BEING_HIT
-        P = o == BRAKE ? 0.05 : 0.0
-        P = o == ACC ? 0.9 : 0.0
-        P = o == NOTHING ? 0.05 : 0.0
+        P = o == BRAKE ? 0.05 : P
+        P = o == ACC ? 0.9 : P
+        P = o == NOTHING ? 0.05 : P
       end
     elseif s == STRONG
-      P = o == BRAKE ? 0.05 : 0.0
-      P = o == ACC ? 0.05 : 0.0
-      P = o == NOTHING ? 0.9 : 0.0
+      P = o == BRAKE ? 0.05 : P
+      P = o == ACC ? 0.05 : P
+      P = o == NOTHING ? 0.9 : P
     end
+
+    return P
   else
     if o == BRAKE || o == ACC
       return 0.0
