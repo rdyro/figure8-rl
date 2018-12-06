@@ -21,7 +21,7 @@ export predict_collision
 
 function replan_adv(agent_self::Agent, world::World, t::Float64=0.0)
 	c_closest = pomdp.Collision(Inf, Inf, pomdp.NO_COLLISION)
-	c_v_closest = [0.0, 0.0]
+	c_v_closest = [NaN, NaN]
   # Check for collisions with all other agents
   # If collisions are detected then get the closest one to the agent 
   for agent in world.agents
@@ -112,6 +112,7 @@ function predict_collision(x_self::Array{Float64},
 	(vc_self, vc_opp, t_c) = closest_approach(P_self, P_opp)
 
 	c_v = vc_opp - vc_self
+	c_v = vc_self - vc_opp
 
 	# Compute collision angle
 	th_collision = th_self - atan(c_v[2], c_v[1])
