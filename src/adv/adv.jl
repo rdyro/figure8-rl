@@ -115,10 +115,10 @@ function predict_collision(x_self::Array{Float64},
 	(vc_self, vc_opp, t_c) = closest_approach(P_self, P_opp)
 
 	cv = vc_self
-	rv = vc_self - vc_opp
+	rv = vc_opp - vc_self
 
 	# Compute collision angle
-	th_collision = th_self - atan(cv[2], cv[1])
+	th_collision = th_self - atan(rv[2], rv[1])
 	
 	# Determine collision type
 	collision_type = pomdp.NO_COLLISION
@@ -137,7 +137,6 @@ function predict_collision(x_self::Array{Float64},
 
 	# Compute distance of self to collision
 	d = norm(cv)
-
 
 	return (pomdp.Collision(d, t_c, collision_type), cv)
 

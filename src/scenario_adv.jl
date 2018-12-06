@@ -61,8 +61,14 @@ function main()
 	agent2.controller! = pomdp.adv_controller!
 	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.STRONG]
 
+  x03 = [len_rd - 150.0; 25.0; 0.0]
+  agent3 = Agent(3, copy(x03), vis.make_car(context, [1.0, 0.0, 0.0]))
+	agent3.controller! = pomdp.adv_controller!
+	agent3.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.MEDIUM]
+
   push!(world.agents, agent1)
   push!(world.agents, agent2)
+	push!(world.agents, agent3)
   # ------------------------------------------------------------------------- #
 
   # make diagnostics render objects
@@ -79,7 +85,7 @@ function main()
   oldt = (time_ns() - t0) / 1e9
 
 	t_prev_replan = 0.0
-	plan_ex_time = 0.05
+	plan_ex_time = 0.25
 
   while window
     t = (time_ns() - t0) / 1e9
@@ -102,7 +108,18 @@ function main()
 			c_v = [NaN, NaN]
 			if t > t_prev_replan + plan_ex_time
 				(agent.custom[3], c_v) = adv.replan_adv(agent, world)
-				#@printf("[AGENT %d] REPLANNED TO: %d \n", agent.id, Int(agent.custom[3]))
+
+				if agent.id == 1
+					(o1, _) = predict_collision(agent1.x, agent2.x, world)
+					(o2, _) = predict_collision(agent2.x, agent1.x, world)
+					print("[AGENT 1]")
+					println(o1.ctype)
+					print("[AGENT 2]")
+					println(o2.ctype)
+
+					println("---------------------------")
+				end
+				
 			end
 
       ## advance one frame in time
@@ -141,6 +158,8 @@ function main()
       end
 
     end
+
+		
 		
 		if t > t_prev_replan + plan_ex_time
 			t_prev_replan = t
