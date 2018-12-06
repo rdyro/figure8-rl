@@ -80,7 +80,8 @@ function update_belief(b::AbstractArray{Float64, 1}, o::Enum,
 end
 
 function sample_adv_a(dt::Enum, c::Collision)
-  if c.d <= max_d && c.t >= 0.0 && c.t <= max_t
+  if c.ctype != NO_COLLISION
+    println(dt)
     # set cP
     cP = Float64[]
     if dt == WEAK
@@ -97,7 +98,9 @@ function sample_adv_a(dt::Enum, c::Collision)
 
     # sample
     r = rand()
-    for i in 1:length(ACTIONS)
+    println(cP)
+    println(r)
+    for i in length(ACTIONS):-1:1
       if r >= cP[i]
         return ACTIONS[i]
       end

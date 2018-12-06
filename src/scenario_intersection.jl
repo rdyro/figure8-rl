@@ -53,15 +53,15 @@ function main()
 	ctrl_d = discretize_adv(world)
 
   # make the agents
-  x01 = [len_rd - 100.0; 25.0; 0.0]
+  x01 = [len_rd - 50.0; 25.0; 0.0]
   agent1 = Agent(1, copy(x01), vis.make_car(context))
 	agent1.controller! = olm.controller_pofs!
   agent1.custom = [0.0, 0.0]
 
-  x02 = [len_rd / 2 - 100.0; 25.0; 0]
+  x02 = [len_rd / 2 - 50.0; 25.0; 0]
   agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
 	agent2.controller! = pomdp.adv_controller!
-	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.STRONG]
+	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.WEAK]
 
   push!(world.agents, agent1)
   push!(world.agents, agent2)
