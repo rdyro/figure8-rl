@@ -1,8 +1,8 @@
 module olm
 dir = @__DIR__
 
-push!(LOAD_PATH, dir * "../sim")
-push!(LOAD_PATH, dir * "../dis")
+push!(LOAD_PATH, dir * "/../sim")
+push!(LOAD_PATH, dir * "/../dis")
 
 using sim
 using dis

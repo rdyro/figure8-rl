@@ -1,5 +1,7 @@
 dir = @__DIR__
-push!(LOAD_PATH, dir * "../pomdp")
+push!(LOAD_PATH, dir * "/../pomdp")
+push!(LOAD_PATH, dir * "/../adv")
+using adv
 using pomdp
 
 mutable struct PofsNode
@@ -7,7 +9,7 @@ mutable struct PofsNode
   u::AbstractArray{Float64, 1}
   b::AbstractArray{Float64, 1}
   adv_x::AbstractArray{Float64, 1}
-  c::Collision
+  c::pomdp.Collision
   r::Float64
 
   PofsNode() = new(Float64[], Float64[], pomdp.Collision(), 0.0)
@@ -26,11 +28,11 @@ function plan_pofs(x::AbstractArray{Float64, 1}, agent::Agent,
   value = PofsNode()
   value.x = x
   # uniform prior belief
-  value.b = fill(1.0 / length(ACTIONS), length(ACTIONS)) 
+  value.b = fill(1.0 / length(pomdp.ACTIONS), length(pomdp.ACTIONS)) 
   value.adv_x = adv_agent.x
 
-  adv_agent.controller = adv_controller!
-  c = predict_collision(adv_agent.x, agent.x, world)
+  adv_agent.controller = pomdp.adv_controller!
+  (c, _) = adv.predict_collision(adv_agent.x, agent.x, world)
   value.c = c
 
   root = GroupTree(value)
@@ -79,7 +81,6 @@ function select_action_pofs(node::Tree, agent::Agent, adv_agent::Agent,
 
     adv_nx = copy(node.value.adv_x)
     adv_u = fill(0.0, length(u))
-
     adv_agent.custom[3] = o
     sim.advance!(sim.default_dynamics!, adv_nx, Pair(adv_agent, world), 0.0,
                  olm_dt, olm_h)
@@ -102,9 +103,9 @@ function select_action_pofs(node::Tree, agent::Agent, adv_agent::Agent,
     for o in ACTIONS
       oidx = Int(o)
       adv_nx = adv_NX[oidx]
-      nc = predict_collision(nx, adv_nx, world)
+      (nc, _) = adv.predict_collision(nx, adv_nx, world)
       r = reward(vcat(node.value.x, nc.d, nc.t), u, nx, agent, world)
-      bp = update_belief(node.value.b, o, node.value.c)
+      bp = pomdp.update_belief(node.value.b, o, node.value.c)
 
       value = PofsNode()
       value.x = nx
@@ -120,8 +121,8 @@ function select_action_pofs(node::Tree, agent::Agent, adv_agent::Agent,
       next_node.r = r
       node.next[la + 1][oidx] = next_node
 
-      ra += r * reduce(+, map(i -> b[i] * P_adv(o, value.c, DRIVERS[i]), 
-                              1:length(DRIVERS)))
+      ra += r * reduce(+, map(i -> b[i] * P_adv(o, value.c, pomdp.DRIVERS[i]), 
+                              1:length(pomdp.DRIVERS)))
     end
 
     if ra > max_r
