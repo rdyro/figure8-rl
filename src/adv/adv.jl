@@ -113,11 +113,8 @@ function predict_collision(x_self::Array{Float64},
 
 	# Compute Closest approach collision
 	(vc_self, vc_opp, t_c) = closest_approach(P_self, P_opp)
-	(x, y) = sim.sp2xy(x_self[1], x_self[3], world.road.path)
 
-	cv = [0.0, 0.0]
-	cv[1] = vc_self[1]
-	cv[2] = vc_self[2]
+	cv = vc_self
 	rv = vc_self - vc_opp
 
 	# Compute collision angle
