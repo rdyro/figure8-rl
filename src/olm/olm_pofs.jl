@@ -16,7 +16,7 @@ mutable struct PofsNode
                    pomdp.Collision(), 0.0)
 end
 
-const olm_pofs_dt = 0.3
+const olm_pofs_dt = 0.5
 function plan_pofs(x::AbstractArray{Float64, 1}, b::AbstractArray{Float64, 1}, 
                    agent::Agent, adv_agent::Agent, world::World, 
                    reward::Function, ctrl_d::Discretization, depth::Int)

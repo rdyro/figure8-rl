@@ -19,17 +19,18 @@ struct Collision
   Collision() = new(0.0, 0.0, NO_COLLISION)
 end
 
-const max_t = 5.0
+const max_t = 2.0
 const max_d = 10.0
 function reward(x, u, nx, agent, world)
   c = agent.custom
 
   base_r = abs(x[3]) > 0.35 * world.road.width ? -1e9 : x[2]^3
   coll_r = 0.0
-  #if c.ctype != NO_COLLISION
-  if c.ctype == HITTING
+  if c.ctype != NO_COLLISION
+  #if c.ctype == HITTING
     t = c.t < 1.0 ? 1.0 : c.t
-    coll_r += -1e9 * (max_d - c.d) / 10.0 * (max_t - t)
+    coll_r = -1e9 * (max_d - c.d) / 10.0 * (max_t - t)
+    coll_r = c.ctype == BEING_HIT ? coll_r * 1e-5 : coll_r
   end
 
   return base_r + coll_r
@@ -50,7 +51,7 @@ function P_adv(o::Enum, c::Collision, s::Enum)
         P = o == NOTHING ? 0.05 : P
       elseif c.ctype == BEING_HIT
         P = o == BRAKE ? 0.05 : P
-        P = o == ACC ? 0.9 : P
+        P = o == ACC ? 0.90 : P
         P = o == NOTHING ? 0.05 : P
       end
     elseif s == STRONG
@@ -93,6 +94,7 @@ function sample_adv_a(dt::Enum, c::Collision)
         cP = [0.9, 0.95, 1.0]
       elseif c.ctype == BEING_HIT
         cP = [0.05, 0.95, 1.0]
+        #cP = [0.05, 0.1, 1.0]
       end
     elseif dt == STRONG
       cP = [0.05, 0.10, 1.0]

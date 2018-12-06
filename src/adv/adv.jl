@@ -123,7 +123,8 @@ function predict_collision(x_self::Array{Float64},
 	# Determine collision type
 	collision_type = pomdp.NO_COLLISION
 
-	if norm(rv) < 10.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
+  # Predicted collision criteria
+	if norm(rv) < pomdp.max_d && 0.0 < t_c < pomdp.max_t 
 		if -pi / 2 < th_collision < pi / 2
 			collision_type = pomdp.HITTING
 		else
