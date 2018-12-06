@@ -1,4 +1,4 @@
-module POMDP
+module pomdp
 
 @enum CollisionType HITTING=1 BEING_HIT=2
 @enum DriverType WEAK=1 MEDIUM=2 STRONG=3

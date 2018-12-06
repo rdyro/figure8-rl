@@ -1,3 +1,7 @@
+dir = @__DIR__
+push!(LOAD_PATH, dir * "../pomdp")
+using pomdp
+
 mutable struct PofsNode
   x::AbstractArray{Float64, 1}
   u::AbstractArray{Float64, 1}
