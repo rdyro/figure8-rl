@@ -136,8 +136,8 @@ function main()
     for agent in world.agents
 
 			if t > t_prev_replan + plan_ex_time
-				agent.custom[3] = adv.replan_adv(Pair(agent, world))
-				@printf("[AGENT %d] REPLANNED TO: %d \n", agent.id, Int(agent.custom[3]))
+				agent.custom[3] = adv.replan_adv(agent, world)
+				#@printf("[AGENT %d] REPLANNED TO: %d \n", agent.id, Int(agent.custom[3]))
 			end
 
       ## advance one frame in time

@@ -1,13 +1,7 @@
 module pomdp
 dir_path = @__DIR__
 push!(LOAD_PATH, dir_path * "/../sim") # simulation
-push!(LOAD_PATH, dir_path * "/../vis") # visualization
-push!(LOAD_PATH, dir_path * "/../adv") # adversary policies
-push!(LOAD_PATH, dir_path * "/../dis") # discretization
 using sim
-using vis
-using adv
-using dis
 
 @enum CollisionType HITTING=1 BEING_HIT=2
 @enum DriverType WEAK=1 MEDIUM=2 STRONG=3
@@ -113,6 +107,8 @@ function adv_controller!(u::AbstractArray{Float64, 1},
                          dx::AbstractArray{Float64, 1}, 
                          agent_world::Pair{Agent, World},
                          t::Float64)
+  agent = agent_world.first
+
   v_track = agent.custom[1]
   p_track = agent.custom[2]
   o = agent.custom[3]

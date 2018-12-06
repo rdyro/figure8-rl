@@ -19,7 +19,7 @@ using LinearAlgebra
 
 export predict_collision
 
-function replan_adv(agent_self::Agent, world::World, t::Float64)
+function replan_adv(agent_self::Agent, world::World, t::Float64=0.0)
   target_v = world.road.path.S[end] / 15 # target velocity is around the track in 15 seconds
 
   d_min = Inf

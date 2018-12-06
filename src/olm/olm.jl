@@ -19,6 +19,14 @@ mutable struct Tree
   Tree(value) = new(value, Tree[])
 end
 
+mutable struct GroupTree
+  value::Any
+  next::AbstractArray{AbstractArray{GroupTree, 1}, 1}
+
+  GroupTree() = new(nothing, Array{GroupTree, 1}[])
+  GroupTree(value) = new(value, Array{GroupTree, 1}[])
+end
+
 include(dir * "/olm_mcts.jl")
 include(dir * "/olm_fwds.jl")
 
