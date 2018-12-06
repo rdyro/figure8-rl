@@ -91,12 +91,12 @@ function main()
 	ctrl_d = discretize_adv(world)
 
   # make the agents
-  x01 = [len_rd / 2 - 10.0; 5.0; 0]
+  x01 = [len_rd / 2 - 100.0; 25.0; 0]
   agent1 = Agent(1, copy(x01), vis.make_car(context, [0.0, 1.0, 0.0]))
 	agent1.controller! = pomdp.adv_controller!
 	agent1.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.WEAK]
 
-  x02 = [len_rd - 20.0; 15.0; 0.0]
+  x02 = [len_rd - 100.0; 25.0; 0.0]
   agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
 	agent2.controller! = pomdp.adv_controller!
 	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.STRONG]
@@ -109,6 +109,9 @@ function main()
   info1 = vis.InfoBox(context, 0.75, 0.75, vis_scaling)
   info2 = vis.InfoBox(context, -0.75, -0.25, vis_scaling)
 
+	v1 = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0)
+	v2 = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0)
+	
   # main loop for rendering and simulation
   window = true
   h = 1e-2
@@ -117,6 +120,8 @@ function main()
 
 	t_prev_replan = 0.0
 	plan_ex_time = 0.5
+
+	c_vecs = fill(0.0, length(world.agents), 2)
   while window
     t = (time_ns() - t0) / 1e9
 
@@ -133,10 +138,13 @@ function main()
       println("Resetting")
     end
 
+		n = 1
     for agent in world.agents
 
+			c_v = nothing
 			if t > t_prev_replan + plan_ex_time
-				agent.custom[3] = adv.replan_adv(agent, world)
+				(agent.custom[3], c_v) = adv.replan_adv(agent, world)
+				c_vecs[n, :] = c_v
 				#@printf("[AGENT %d] REPLANNED TO: %d \n", agent.id, Int(agent.custom[3]))
 			end
 
@@ -151,6 +159,17 @@ function main()
       ## visualize
       (x, y, sx, sy, dx, u) = diagnostic(agent, world, t)
       agent.is_braking = dx[1] * u[1] < 0
+			
+			if c_v != nothing
+				if agent.id == 1
+					vis.update_vector_xy!(v1, vis_scaling * x, vis_scaling * y,
+													vis_scaling * c_v[1], vis_scaling * c_v[2])
+				elseif agent.id == 2
+					vis.update_vector_xy!(v2, vis_scaling * x, vis_scaling * y,
+													vis_scaling * c_v[1], vis_scaling * c_v[2])
+				end
+			end
+
 
       ## get additional information
       dp = dx[3]
@@ -165,6 +184,8 @@ function main()
                        vis.rotate_mat(th_car - pi / 2))
         push!(to_visualize, agent.car)
       end
+
+			n += 1
     end
 		
 		if t > t_prev_replan + plan_ex_time
@@ -173,6 +194,8 @@ function main()
 
     push!(to_visualize, info1)
     push!(to_visualize, info2)
+		push!(to_visualize, v1)
+		push!(to_visualize, v2)
 
     window = vis.visualize(context, to_visualize)
 

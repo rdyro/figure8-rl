@@ -21,6 +21,7 @@ export predict_collision
 
 function replan_adv(agent_self::Agent, world::World, t::Float64=0.0)
 	c_closest = pomdp.Collision(Inf, Inf, pomdp.NO_COLLISION)
+	c_v_closest = [0.0, 0.0]
   # Check for collisions with all other agents
   # If collisions are detected then get the closest one to the agent 
   for agent in world.agents
@@ -28,14 +29,15 @@ function replan_adv(agent_self::Agent, world::World, t::Float64=0.0)
       continue
     end
 
-    c = predict_collision(agent_self.x, agent.x, world, t)
+		(c, c_v) = predict_collision(agent_self.x, agent.x, world, t)
     
     if c.ctype != pomdp.NO_COLLISION && c.d < c_closest.d
 			c_closest = c
+			c_v_closest = c_v
     end
   end
 
-	return pomdp.sample_adv_a(agent_self.custom[5], c_closest)
+	return (pomdp.sample_adv_a(agent_self.custom[5], c_closest), c_v_closest)
 
 end
 
@@ -128,7 +130,8 @@ function predict_collision(x_self::Array{Float64},
 	# Compute distance of self to collision
 	d = norm(vc_self)
 
-	return pomdp.Collision(d, t_c, collision_type)
+
+	return (pomdp.Collision(d, t_c, collision_type), c_v)
 
 end
 
