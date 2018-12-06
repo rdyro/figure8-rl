@@ -22,14 +22,13 @@ end
 const max_t = 5.0
 const max_d = 10.0
 function reward(x, u, nx, agent, world)
-  d = nx[4]
-  t = nx[5]
+  c = agent.custom
 
   base_r = abs(x[3]) > 0.35 * world.road.width ? -1e9 : x[2]^3
   coll_r = 0.0
-  if d < max_d && t >= 0.0 && t <= max_t
-    t = t < 1.0 ? 1.0 : t
-    coll_r += -2.5e3 * (d / 10.0) * (max_t - t)
+  if c.ctype != NO_COLLISION
+    t = c.t < 1.0 ? 1.0 : c.t
+    coll_r += -2.5e3 * (max_d - c.d) / 10.0 * (max_t - t)
   end
 
   return base_r + coll_r
@@ -70,13 +69,15 @@ end
 
 function update_belief(b::AbstractArray{Float64, 1}, o::Enum, c::Collision)
   bp = similar(b)
+  bp_sum = 0.0
   for i in 1:length(b)
     #println("i -> $(i), b[i] -> $(b[i]), P -> $(P_adv(o, c, DRIVERS[i]))")
     bp[i] = b[i] * P_adv(o, c, DRIVERS[i])
+    bp_sum += bp[i]
   end
   bp ./= sum(bp)
 
-  return bp
+  return bp_sum != 0.0 ? bp : b
 end
 
 function sample_adv_a(dt::Enum, c::Collision)

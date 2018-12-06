@@ -12,14 +12,13 @@ mutable struct PofsNode
   c::pomdp.Collision
   r::Float64
 
-  PofsNode() = new(Float64[], Float64[], pomdp.Collision(), 0.0)
-  PofsNode(x) = new(x, Float64[], pomdp.Collision(), 0.0)
-  PofsNode(x, u) = new(x, u, pomdp.Collision(), 0.0)
+  PofsNode() = new(Float64[], Float64[], Float64[], Float64[],
+                   pomdp.Collision(), 0.0)
 end
 
-function plan_pofs(x::AbstractArray{Float64, 1}, agent::Agent, 
-                   adv_agent::Agent, world::World, reward::Function, 
-                   ctrl_d::Discretization, depth::Int)
+function plan_pofs(x::AbstractArray{Float64, 1}, b::AbstractArray{Float64, 1}, 
+                   agent::Agent, adv_agent::Agent, world::World, 
+                   reward::Function, ctrl_d::Discretization, depth::Int)
   # backup variables
   adv_agent_controller! = adv_agent.controller!
   adv_agent_custom = adv_agent.custom
@@ -31,7 +30,7 @@ function plan_pofs(x::AbstractArray{Float64, 1}, agent::Agent,
   value.b = fill(1.0 / length(pomdp.ACTIONS), length(pomdp.ACTIONS)) 
   value.adv_x = adv_agent.x
 
-  adv_agent.controller = pomdp.adv_controller!
+  adv_agent.controller! = pomdp.adv_controller!
   (c, _) = adv.predict_collision(adv_agent.x, agent.x, world)
   value.c = c
 
@@ -55,10 +54,10 @@ function plan_pofs(x::AbstractArray{Float64, 1}, agent::Agent,
     error("Action empty, error in POFS")
   end
 
-  return us
+  return (us, root)
 end
 
-function select_action_pofs(node::Tree, agent::Agent, adv_agent::Agent, 
+function select_action_pofs(node::GroupTree, agent::Agent, adv_agent::Agent, 
                             world::World, reward::Function, 
                             ctrl_d::Discretization, depth::Int)
   if depth <= 0
@@ -71,16 +70,16 @@ function select_action_pofs(node::Tree, agent::Agent, adv_agent::Agent,
   la_len = ctrl_d.thr[end] * ctrl_d.pt[end] # number of actions to survey
   node.next = Array{Array{GroupTree, 1}, 1}(undef, la_len)
   for aidx in 1:la_len
-    node.next[aidx] = Array{GroupTree, 1}(undef, length(ACTIONS))
+    node.next[aidx] = Array{GroupTree, 1}(undef, length(pomdp.ACTIONS))
   end
 
   # predict adv agent doing three possible actions
-  adv_NX = Array{Array{Float64, 1}, 1}(undef, length(ACTIONS))
-  for o in ACTIONS
+  adv_NX = Array{Array{Float64, 1}, 1}(undef, length(pomdp.ACTIONS))
+  for o in pomdp.ACTIONS
     oidx = Int(o)
 
     adv_nx = copy(node.value.adv_x)
-    adv_u = fill(0.0, length(u))
+    adv_u = fill(0.0, ctrl_d.dim)
     adv_agent.custom[3] = o
     sim.advance!(sim.default_dynamics!, adv_nx, Pair(adv_agent, world), 0.0,
                  olm_dt, olm_h)
@@ -100,11 +99,16 @@ function select_action_pofs(node::Tree, agent::Agent, adv_agent::Agent,
     nx[1] = mod(nx[1], world.road.path.S[end])
 
     ra = 0.0
-    for o in ACTIONS
+    for o in pomdp.ACTIONS
       oidx = Int(o)
       adv_nx = adv_NX[oidx]
       (nc, _) = adv.predict_collision(nx, adv_nx, world)
-      r = reward(vcat(node.value.x, nc.d, nc.t), u, nx, agent, world)
+
+      custom = agent.custom
+      agent.custom = nc
+      r = reward(node.value.x, u, nx, agent, world)
+      agent.custom = custom
+
       bp = pomdp.update_belief(node.value.b, o, node.value.c)
 
       value = PofsNode()
@@ -112,16 +116,17 @@ function select_action_pofs(node::Tree, agent::Agent, adv_agent::Agent,
       value.u = u
       value.b = bp
       value.adv_x = adv_nx
-      value.nc = nc
+      value.c = nc
 
       next_node = GroupTree(value)
       next_r = select_action_pofs(next_node, agent, adv_agent, world, reward, 
                                   ctrl_d, depth - 1)
       r += olm_gamma * next_r
-      next_node.r = r
+      next_node.value.r = r
       node.next[la + 1][oidx] = next_node
 
-      ra += r * reduce(+, map(i -> b[i] * P_adv(o, value.c, pomdp.DRIVERS[i]), 
+      ra += r * reduce(+, map(i -> node.value.b[i] * 
+                              pomdp.P_adv(o, value.c, pomdp.DRIVERS[i]), 
                               1:length(pomdp.DRIVERS)))
     end
 

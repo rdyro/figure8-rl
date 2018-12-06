@@ -48,24 +48,26 @@ function main()
 
 	len_rd = path.S[end]
 
-	v_track = len_rd / 15
-	p_track = 0.0
-	ctrl_d = discretize_adv(world)
-
-  # make the agents
+  # forward search agent ---------------------------------------------------- #
   x01 = [len_rd - 50.0; 25.0; 0.0]
   agent1 = Agent(1, copy(x01), vis.make_car(context))
 	agent1.controller! = olm.controller_pofs!
   agent1.custom = [0.0, 0.0]
+  b = fill(1 / length(pomdp.DRIVERS), length(pomdp.DRIVERS))
+	ctrl_d = discretize_adv(world)
+  # ------------------------------------------------------------------------- #
 
+	v_track = 25
+	p_track = 0.0
   x02 = [len_rd / 2 - 50.0; 25.0; 0]
   agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
 	agent2.controller! = pomdp.adv_controller!
 	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.STRONG]
 
+
   push!(world.agents, agent1)
   push!(world.agents, agent2)
-  # ------------------------------------------------------------------------- #
+
 
   # make diagnostics render objects
   info1 = vis.InfoBox(context, 0.75, 0.75, vis_scaling)
@@ -79,7 +81,6 @@ function main()
   t0 = time_ns()
   oldt = (time_ns() - t0) / 1e9
 
-  b = fill(1 / length(pomdp.DRIVERS), length(pomdp.DRIVERS))
   frame = 0
   while window
     t = (time_ns() - t0) / 1e9
@@ -96,26 +97,30 @@ function main()
 
       b = fill(1 / length(pomdp.DRIVERS), length(pomdp.DRIVERS))
       println("RESETTING")
-      println(b)
     end
 
     for agent in world.agents
       cv = nothing
-      if agent.id == 2
+      if agent.id == 1
+        (u, plan) = olm.plan_pofs(agent1.x, b, agent1, agent2, world, pomdp.reward,
+                          ctrl_d, 3)
+        agent1.custom = u
+      elseif agent.id == 2
         (agent.custom[3], cv) = adv.replan_adv(agent, world)
+        #=
         if mod(frame, 30) == 0
           (c, _) = predict_collision(agent2.x, agent1.x, world)
           b = pomdp.update_belief(b, agent.custom[3], c)
-          println(b)
 
           frame = 0
         end
         frame += 1
+        =#
       end
 
-
       ## advance one frame in time
-      advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
+      dt = 0.1
+      advance!(agent.dynamics!, agent.x, Pair(agent, world), 0.0, dt, h)
 			if agent.id == 1
       	update_info(info1, agent, world, t)
       elseif agent.id == 2
