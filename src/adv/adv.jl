@@ -31,7 +31,7 @@ function replan_adv(agent_self::Agent, world::World, t::Float64=0.0)
 
 		(c, cv) = predict_collision(agent_self.x, agent.x, world, t)
     
-    if c.ctype != pomdp.NO_COLLISION && c.d < c_closest.d
+    if c.ctype != pomdp.NO_COLLISION && c.t < c_closest.t
 			c_closest = c
 			cv_closest = cv
     end
@@ -136,7 +136,7 @@ function predict_collision(x_self::Array{Float64},
   end
 
 	# Compute distance of self to collision
-	d = norm(cv)
+	d = norm(rv)
 
 	return (pomdp.Collision(d, t_c, collision_type), cv)
 
