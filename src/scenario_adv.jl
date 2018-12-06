@@ -94,12 +94,12 @@ function main()
   x01 = [len_rd / 2 - 10.0; 5.0; 0]
   agent1 = Agent(1, copy(x01), vis.make_car(context, [0.0, 1.0, 0.0]))
 	agent1.controller! = pomdp.adv_controller!
-	agent1.custom = [v_track, p_track, NOTHING, ctrl_d, WEAK]
+	agent1.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.WEAK]
 
   x02 = [len_rd - 20.0; 15.0; 0.0]
   agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
 	agent2.controller! = pomdp.adv_controller!
-	agent2.custom = [v_track, p_track, NOTHING, ctrl_d, STRONG]
+	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.STRONG]
 
   push!(world.agents, agent1)
   push!(world.agents, agent2)

@@ -2,12 +2,10 @@ module adv
 dir_path = @__DIR__
 push!(LOAD_PATH, dir_path * "/../sim") # simulation
 push!(LOAD_PATH, dir_path * "/../vis") # visualization
-push!(LOAD_PATH, dir_path * "/../adv") # adversary policies
 push!(LOAD_PATH, dir_path * "/../dis") # discretization
 push!(LOAD_PATH, dir_path * "/../pomdp")
 using sim
 using vis
-using adv
 using dis
 using pomdp
 
