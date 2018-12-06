@@ -54,15 +54,18 @@ function parametrize(x::AbstractArray{Float64},
                      world::World)
 
   (sx, sy) = sim.sp2sxsy(x[1], x[3], world.road.path)
-	th = atan(sy, sx)
+	n = norm([sx, sy])
+	sx = sx/n
+	sy = sy/n
 
-  s = mod(x[1], world.road.path.S[end])
   ds = x[2]
 
+	th = atan(sy, sx)
+  s = mod(x[1], world.road.path.S[end])
   p = x[3]
 
-  v_x = ds*cos(th)
-	v_y = ds*sin(th)
+	v_x = ds*sx
+	v_y = ds*sy
   (x_pos, y_pos) = sim.sp2xy(s, p, world.road.path)
   
   P = [x_pos v_x;
@@ -110,9 +113,12 @@ function predict_collision(x_self::Array{Float64},
 
 	# Compute Closest approach collision
 	(vc_self, vc_opp, t_c) = closest_approach(P_self, P_opp)
+	(x, y) = sim.sp2xy(x_self[1], x_self[3], world.road.path)
 
-	cv = vc_opp - vc_self
-	cv = vc_self - vc_opp
+	cv = [0.0, 0.0]
+	cv[1] = vc_self[1] - x
+	cv[2] = vc_self[2] - y
+	rv = vc_self - vc_opp
 
 	# Compute collision angle
 	th_collision = th_self - atan(cv[2], cv[1])
@@ -120,7 +126,7 @@ function predict_collision(x_self::Array{Float64},
 	# Determine collision type
 	collision_type = pomdp.NO_COLLISION
 
-	if norm(cv) < 10.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
+	if norm(rv) < 10.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
 		if -pi / 2 < th_collision < pi / 2
 			collision_type = pomdp.HITTING
 		else
@@ -133,7 +139,7 @@ function predict_collision(x_self::Array{Float64},
   end
 
 	# Compute distance of self to collision
-	d = norm(vc_self)
+	d = norm(cv)
 
 
 	return (pomdp.Collision(d, t_c, collision_type), cv)

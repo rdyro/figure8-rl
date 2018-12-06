@@ -79,7 +79,7 @@ function main()
   oldt = (time_ns() - t0) / 1e9
 
 	t_prev_replan = 0.0
-	plan_ex_time = 0.25
+	plan_ex_time = 0.05
 
   while window
     t = (time_ns() - t0) / 1e9
@@ -99,7 +99,7 @@ function main()
 
     for agent in world.agents
 
-			c_v = nothing
+			c_v = [NaN, NaN]
 			if t > t_prev_replan + plan_ex_time
 				(agent.custom[3], c_v) = adv.replan_adv(agent, world)
 				#@printf("[AGENT %d] REPLANNED TO: %d \n", agent.id, Int(agent.custom[3]))
