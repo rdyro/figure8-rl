@@ -21,7 +21,7 @@ export predict_collision
 
 function replan_adv(agent_self::Agent, world::World, t::Float64=0.0)
 	c_closest = pomdp.Collision(Inf, Inf, pomdp.NO_COLLISION)
-	c_v_closest = [NaN, NaN]
+	cv_closest = [NaN, NaN]
   # Check for collisions with all other agents
   # If collisions are detected then get the closest one to the agent 
   for agent in world.agents
@@ -29,15 +29,15 @@ function replan_adv(agent_self::Agent, world::World, t::Float64=0.0)
       continue
     end
 
-		(c, c_v) = predict_collision(agent_self.x, agent.x, world, t)
+		(c, cv) = predict_collision(agent_self.x, agent.x, world, t)
     
     if c.ctype != pomdp.NO_COLLISION && c.d < c_closest.d
 			c_closest = c
-			c_v_closest = c_v
+			cv_closest = cv
     end
   end
 
-	return (pomdp.sample_adv_a(agent_self.custom[5], c_closest), c_v_closest)
+	return (pomdp.sample_adv_a(agent_self.custom[5], c_closest), cv_closest)
 
 end
 
@@ -111,16 +111,16 @@ function predict_collision(x_self::Array{Float64},
 	# Compute Closest approach collision
 	(vc_self, vc_opp, t_c) = closest_approach(P_self, P_opp)
 
-	c_v = vc_opp - vc_self
-	c_v = vc_self - vc_opp
+	cv = vc_opp - vc_self
+	cv = vc_self - vc_opp
 
 	# Compute collision angle
-	th_collision = th_self - atan(c_v[2], c_v[1])
+	th_collision = th_self - atan(cv[2], cv[1])
 	
 	# Determine collision type
 	collision_type = pomdp.NO_COLLISION
 
-	if norm(c_v) < 10.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
+	if norm(cv) < 10.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
 		if -pi / 2 < th_collision < pi / 2
 			collision_type = pomdp.HITTING
 		else
@@ -128,11 +128,15 @@ function predict_collision(x_self::Array{Float64},
 		end
 	end
 
+  if collision_type == pomdp.NO_COLLISION
+    cv = fill(NaN, length(cv))
+  end
+
 	# Compute distance of self to collision
 	d = norm(vc_self)
 
 
-	return (pomdp.Collision(d, t_c, collision_type), c_v)
+	return (pomdp.Collision(d, t_c, collision_type), cv)
 
 end
 
