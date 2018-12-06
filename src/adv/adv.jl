@@ -93,8 +93,8 @@ end
 
 function predict_collision(x_self::Array{Float64},
 													 x_opp::Array{Float64},
-													world::World,
-													time::Float64=0.0)
+                           world::World,
+                           time::Float64=0.0)
 	# Parametrize both agents
 	# Compute closest approach
 	# Compute Collision angle

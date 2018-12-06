@@ -79,6 +79,7 @@ function main()
   t0 = time_ns()
   oldt = (time_ns() - t0) / 1e9
 
+  b = fill(1 / length(pomdp.DRIVERS), length(DRIVERS))
   while window
     t = (time_ns() - t0) / 1e9
 
@@ -94,6 +95,7 @@ function main()
 
       println("RESETTING")
     end
+    (c, _) = adv.predict_collision(
 
     for agent in world.agents
       cv = nothing
