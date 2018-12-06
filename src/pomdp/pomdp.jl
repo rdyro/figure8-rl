@@ -26,7 +26,8 @@ function reward(x, u, nx, agent, world)
 
   base_r = abs(x[3]) > 0.35 * world.road.width ? -1e9 : x[2]^3
   coll_r = 0.0
-  if c.ctype != NO_COLLISION
+  #if c.ctype != NO_COLLISION
+  if c.ctype == HITTING
     t = c.t < 1.0 ? 1.0 : c.t
     coll_r += -1e9 * (max_d - c.d) / 10.0 * (max_t - t)
   end

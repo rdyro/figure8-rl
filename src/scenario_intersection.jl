@@ -59,7 +59,7 @@ function main()
 
 	v_track = 25
 	p_track = 0.0
-  x02 = [len_rd / 2 - 50.0; 20.5; 0]
+  x02 = [len_rd / 2 - 50.0; 28.0; 0]
   agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
 	agent2.controller! = pomdp.adv_controller!
 	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.MEDIUM]
@@ -96,7 +96,7 @@ function main()
       agent2.x = copy(x02)
 
       b = fill(1 / length(pomdp.DRIVERS), length(pomdp.DRIVERS))
-      b = [0.0, 1.0, 0.0]
+      #b = [0.0, 1.0, 0.0]
       println("RESETTING")
     end
 
