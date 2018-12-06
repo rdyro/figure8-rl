@@ -3,7 +3,7 @@ dir_path = @__DIR__
 push!(LOAD_PATH, dir_path * "/../sim") # simulation
 using sim
 
-@enum CollisionType HITTING=1 BEING_HIT=2
+@enum CollisionType NO_COLLISION=0 HITTING=1 BEING_HIT=2
 @enum DriverType WEAK=1 MEDIUM=2 STRONG=3
 @enum DriverAction BRAKE=1 ACC=2 NOTHING=3
 
@@ -78,15 +78,15 @@ function sample_adv_a(dt::Enum, c::Collision)
   if c.d <= max_d && c.t >= 0.0 && c.t <= max_t
     # set cP
     cP = Float64[]
-    if s == WEAK
+    if dt == WEAK
       cP = [0.9, 0.95, 1.0]
-    elseif s == MEDIUM
+    elseif dt == MEDIUM
       if c.ctype == HITTING
         cP = [0.9, 0.95, 1.0]
       elseif c.ctype == BEING_HIT
         cP = [0.05, 0.95, 1.0]
       end
-    elseif s == STRONG
+    elseif dt == STRONG
       cP = [0.05, 0.10, 1.0]
     end
 
@@ -117,9 +117,9 @@ function adv_controller!(u::AbstractArray{Float64, 1},
   u[1] = 0.1 * (v_track - x[2])
   u[2] = 1.0 * (p_track - x[3])
   if o == BRAKE
-    u[2] = sign(x[2]) * ctrl_d.mi[1]
+    u[1] = sign(x[2]) * ctrl_d.mi[1]
   elseif o == ACC
-    u[2] = sign(x[2]) * ctrl_d.mx[1]
+    u[1] = sign(x[2]) * ctrl_d.mx[1]
   elseif o == NOTHING
   end
 end

@@ -20,10 +20,7 @@ using LinearAlgebra
 export predict_collision
 
 function replan_adv(agent_self::Agent, world::World, t::Float64=0.0)
-  target_v = world.road.path.S[end] / 15 # target velocity is around the track in 15 seconds
-
-  d_min = Inf
-  c_type_closest = 0
+	c_closest = pomdp.Collision(Inf, Inf, pomdp.NO_COLLISION)
   # Check for collisions with all other agents
   # If collisions are detected then get the closest one to the agent 
   for agent in world.agents
@@ -31,15 +28,14 @@ function replan_adv(agent_self::Agent, world::World, t::Float64=0.0)
       continue
     end
 
-    (d, t_c, c_type) = predict_collision(agent_self.x, agent.x, world, t)
+    c = predict_collision(agent_self.x, agent.x, world, t)
     
-    if c_type != 0 && d < d_min
-      d_min = d
-      c_type_closest = c_type
+    if c.ctype != pomdp.NO_COLLISION && c.d < c_closest.d
+			c_closest = c
     end
   end
 
-	return pomdp.sample_adv_a(agent_self.custom[5], c_type_closest)
+	return pomdp.sample_adv_a(agent_self.custom[5], c_closest)
 
 end
 
@@ -60,20 +56,15 @@ function parametrize(x::AbstractArray{Float64},
 
   s = mod(x[1], world.road.path.S[end])
   ds = x[2]
-  dds = dx[2]
 
   p = x[3]
 
   v_x = ds*cos(th)
 	v_y = ds*sin(th)
-
-  a_x = dds*cos(th)
-  a_y = dds*sin(th)
-
   (x_pos, y_pos) = sim.sp2xy(s, p, world.road.path)
   
-  P = [x_pos v_x a_x/2;
-       y_pos v_y a_y/2]
+  P = [x_pos v_x;
+       y_pos v_y]
 
 	return (P, th)
 end
@@ -124,20 +115,20 @@ function predict_collision(x_self::Array{Float64},
 	th_collision = th_self - atan(c_v[2], c_v[1])
 	
 	# Determine collision type
-	collision_type = 0
+	collision_type = pomdp.NO_COLLISION
 
 	if norm(c_v) < 10.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
 		if -pi / 2 < th_collision < pi / 2
-			collision_type = HITTING
+			collision_type = pomdp.HITTING
 		else
-			collision_type = BEING_HIT
+			collision_type = pomdp.BEING_HIT
 		end
 	end
 
 	# Compute distance of self to collision
 	d = norm(vc_self)
 
-	return (d, t_c, collision_type)
+	return pomdp.Collision(d, t_c, collision_type)
 
 end
 
