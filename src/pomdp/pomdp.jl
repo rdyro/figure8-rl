@@ -14,6 +14,8 @@ struct Collision
   d::Float64
   t::Float64
   ctype::Enum
+
+  Collision() = new(0.0, 0.0, NO_COLLISION)
 end
 
 const max_t = 5.0

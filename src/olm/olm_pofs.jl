@@ -37,10 +37,21 @@ function plan_pofs(x::AbstractArray{Float64, 1}, agent::Agent,
 
   rs = select_action_pofs(root, agent, adv_agent, world, reward, ctrl_d, depth)
   us = Float64[]
+  for node_obs in root.next
+    for node in node_obs 
+      if node.value.r >= rs
+        us = node.value.u
+      end
+    end
+  end
 
   # revert variables
   adv_agent.controller! = adv_agent_controller!
   adv_agent.custom = adv_agent_custom
+
+  if us == Float64[]
+    error("Action empty, error in POFS")
+  end
 
   return us
 end
