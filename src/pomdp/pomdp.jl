@@ -81,7 +81,6 @@ end
 
 function sample_adv_a(dt::Enum, c::Collision)
   if c.ctype != NO_COLLISION
-    println(dt)
     # set cP
     cP = Float64[]
     if dt == WEAK
@@ -98,10 +97,8 @@ function sample_adv_a(dt::Enum, c::Collision)
 
     # sample
     r = rand()
-    println(cP)
-    println(r)
-    for i in length(ACTIONS):-1:1
-      if r >= cP[i]
+    for i in 1:length(ACTIONS)
+      if cP[i] >= r
         return ACTIONS[i]
       end
     end
