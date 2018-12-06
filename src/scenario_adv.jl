@@ -2,12 +2,29 @@ dir_path = @__DIR__
 push!(LOAD_PATH, dir_path * "/sim") # simulation
 push!(LOAD_PATH, dir_path * "/vis") # visualization
 push!(LOAD_PATH, dir_path * "/adv") # adversary policies
+push!(LOAD_PATH, dir_path * "/dis") # discretization
+push!(LOAD_PATH, dir_path * "/pomdp") 
 using sim
 using vis
 using adv
+using dis
+using pomdp
 
 using Serialization
 using Printf
+
+function discretize_adv(world::World)
+  pts_per_acc = 3
+  pts_per_ste = 3
+  min_acc = -15
+  max_acc = 5
+  min_ste = -1e-1
+  max_ste = 1e-1
+  ctrl_d = Discretization([pts_per_acc, pts_per_ste],
+                          [min_acc, min_ste],
+                          [max_acc, max_ste])
+  return ctrl_d
+end
 
 function update_info(info::vis.InfoBox, agent::Agent, world::World, t::Float64)
   (x, y, sx, sy, dx, u) = diagnostic(agent, world, t)
@@ -69,14 +86,20 @@ function main()
 
 	len_rd = path.S[end]
 
+	v_track = len_rd / 15
+	p_track = 0.0
+	ctrl_d = discretize_adv(world)
+
   # make the agents
   x01 = [len_rd / 2 - 10.0; 5.0; 0]
   agent1 = Agent(1, copy(x01), vis.make_car(context, [0.0, 1.0, 0.0]))
-	agent1.controller! = adv.weak_controller!
+	agent1.controller! = pomdp.adv_controller!
+	agent1.custom = [v_track, p_track, NOTHING, ctrl_d, WEAK]
 
   x02 = [len_rd - 20.0; 15.0; 0.0]
   agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
-	agent2.controller! = adv.strong_controller!
+	agent2.controller! = pomdp.adv_controller!
+	agent2.custom = [v_track, p_track, NOTHING, ctrl_d, STRONG]
 
   push!(world.agents, agent1)
   push!(world.agents, agent2)
@@ -91,6 +114,9 @@ function main()
   h = 1e-2
   t0 = time_ns()
   oldt = (time_ns() - t0) / 1e9
+
+	t_prev_replan = 0.0
+	plan_ex_time = 0.5
   while window
     t = (time_ns() - t0) / 1e9
 
@@ -108,6 +134,11 @@ function main()
     end
 
     for agent in world.agents
+
+			if t > t_prev_replan + plan_ex_time
+				agent.custom[3] = adv.replan_adv(Pair(agent, world))
+				@printf("[AGENT %d] REPLANNED TO: %d \n", agent.id, Int(agent.custom[3]))
+			end
 
       ## advance one frame in time
       advance!(agent.dynamics!, agent.x, Pair(agent, world), oldt, t, h)
@@ -135,6 +166,11 @@ function main()
         push!(to_visualize, agent.car)
       end
     end
+		
+		if t > t_prev_replan + plan_ex_time
+			t_prev_replan = t
+		end
+
     push!(to_visualize, info1)
     push!(to_visualize, info2)
 

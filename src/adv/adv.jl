@@ -1,23 +1,51 @@
 module adv
-dir = @__DIR__
+dir_path = @__DIR__
+push!(LOAD_PATH, dir_path * "/../sim") # simulation
+push!(LOAD_PATH, dir_path * "/../vis") # visualization
+push!(LOAD_PATH, dir_path * "/../adv") # adversary policies
+push!(LOAD_PATH, dir_path * "/../dis") # discretization
+push!(LOAD_PATH, dir_path * "/../pomdp")
+using sim
+using vis
+using adv
+using dis
+using pomdp
 
+using Serialization
+using Printf
 using LinearAlgebra
 
-include(dir * "/adv_weak_v2.jl")
-include(dir * "/adv_strong.jl")
+# include(dir * "/adv_weak_v2.jl")
+# include(dir * "/adv_strong.jl")
 # include(dir * "/adv_medium.jl")
 
 export predict_collision
 
-const TRACKING = 0
-const BRAKING = 1
-const ACCELERATING = 2
+function replan_adv(agent_world::Pair{Agent, World}, t::Float64)
+  world = agent_world.second
+  agent_self = agent_world.first
+  target_v = world.road.path.S[end] / 15 # target velocity is around the track in 15 seconds
 
-const NO_COLLISION = 0
-const HITTING = 1
-const BEING_HIT = 2
+  d_min = Inf
+  c_type_closest = 0
+  # Check for collisions with all other agents
+  # If collisions are detected then get the closest one to the agent 
+  for agent in world.agents
+    if agent.id == agent_self.id
+      continue
+    end
 
-const replan_time = 0.5 # Replan controllers every quarter of a second
+    (d, t_c, c_type) = predict_collision(agent_self.x, agent_self, agent.x, agent, world, t)
+    
+    if c_type != 0 && d < d_min
+      d_min = d
+      c_type_closest = c_type
+    end
+  end
+
+	return pomdp.sample_adv_a(agent.custom[5], c_type_closest)
+
+end
 
 
 function empty_controller!(x::AbstractArray{Float64},
@@ -76,10 +104,10 @@ function closest_approach(p1::AbstractArray{Float64}, p2::AbstractArray{Float64}
   return (v1, v2, t)
 end
 
-function predict_collision(agent_self::Agent,
-													agent_opp::Agent,
+function predict_collision(x_self::Array{Float64}, agent_self::Agent,
+													 x_opp::Array{Float64}, agent_opp::Agent,
 													world::World,
-													time::Float64)
+													time::Float64=0.0)
 	# Parametrize both agents
 	# Compute closest approach
 	# Compute Collision angle
@@ -93,18 +121,18 @@ function predict_collision(agent_self::Agent,
 	dx_self = fill(0.0, 3)
 	f_self = agent_self.controller!
 	agent_self.controller! = empty_controller!
-	agent_self.dynamics!(dx_self, agent_opp.x, Pair(agent_self, world), time)
+	agent_self.dynamics!(dx_self, x_self, Pair(agent_self, world), time)
 	agent_self.controller! = f_self
 	
 	dx_opp = fill(0.0, 3)
 	f_opp = agent_opp.controller!
 	agent_opp.controller! = empty_controller!
-	agent_opp.dynamics!(dx_opp, agent_opp.x, Pair(agent_opp, world), time)
+	agent_opp.dynamics!(dx_opp, x_opp, Pair(agent_opp, world), time)
 	agent_opp.controller! = f_opp
 
 	# Parametrize both agents
-	(P_self, th_self) = parametrize(dx_self, agent_self.x, world)
-	(P_opp, th_opp) = parametrize(dx_opp, agent_opp.x, world)
+	(P_self, th_self) = parametrize(dx_self, x_self, world)
+	(P_opp, th_opp) = parametrize(dx_opp, x_opp, world)
 
 	# Compute Closest approach collision
 	(vc_self, vc_opp, t_c) = closest_approach(P_self, P_opp)
@@ -115,7 +143,7 @@ function predict_collision(agent_self::Agent,
 	th_collision = th_self - atan(c_v[2], c_v[1])
 	
 	# Determine collision type
-	collision_type = NO_COLLISION
+	collision_type = 0
 
 	if norm(c_v) < 10.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
 		if -pi / 2 < th_collision < pi / 2
@@ -131,9 +159,5 @@ function predict_collision(agent_self::Agent,
 	return (d, t_c, collision_type)
 
 end
-
-
-
-
 
 end
