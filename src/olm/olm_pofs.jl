@@ -16,10 +16,10 @@ mutable struct PofsNode
                    pomdp.Collision(), 0.0)
 end
 
+const olm_pofs_dt = 0.3
 function plan_pofs(x::AbstractArray{Float64, 1}, b::AbstractArray{Float64, 1}, 
                    agent::Agent, adv_agent::Agent, world::World, 
                    reward::Function, ctrl_d::Discretization, depth::Int)
-  println(b)
   # backup variables
   adv_agent_controller! = adv_agent.controller!
   adv_agent_custom = adv_agent.custom
@@ -28,7 +28,7 @@ function plan_pofs(x::AbstractArray{Float64, 1}, b::AbstractArray{Float64, 1},
   value = PofsNode()
   value.x = x
   # uniform prior belief
-  value.b = fill(1.0 / length(pomdp.ACTIONS), length(pomdp.ACTIONS)) 
+  value.b = b
   value.adv_x = adv_agent.x
 
   adv_agent.controller! = pomdp.adv_controller!
@@ -37,19 +37,9 @@ function plan_pofs(x::AbstractArray{Float64, 1}, b::AbstractArray{Float64, 1},
 
   root = GroupTree(value)
 
-  rs = select_action_pofs(root, agent, adv_agent, world, reward, ctrl_d, depth)
-  us = Float64[]
-  ret = nothing
-  for node_obs in root.next
-    for node in node_obs 
-      if node.value.r >= rs
-        us = node.value.u
-        root.value.u = us
-        root.value.r = rs
-        ret = root
-      end
-    end
-  end
+  (rs, us) = select_action_pofs(root, agent, adv_agent, world, reward, ctrl_d, 
+                                depth)
+  ret = root
 
   # revert variables
   adv_agent.controller! = adv_agent_controller!
@@ -66,10 +56,11 @@ function select_action_pofs(node::GroupTree, agent::Agent, adv_agent::Agent,
                             world::World, reward::Function, 
                             ctrl_d::Discretization, depth::Int)
   if depth <= 0
-    return 0.0
+    return (0.0, Float64[])
   end
 
   node.value.x[1] = mod(node.value.x[1], world.road.path.S[end])
+  (adv_c, _) = predict_collision(node.value.adv_x, node.value.x, world)
 
   # allocate next level of the tree
   la_len = ctrl_d.thr[end] * ctrl_d.pt[end] # number of actions to survey
@@ -87,7 +78,7 @@ function select_action_pofs(node::GroupTree, agent::Agent, adv_agent::Agent,
     adv_u = fill(0.0, ctrl_d.dim)
     adv_agent.custom[3] = o
     sim.advance!(sim.default_dynamics!, adv_nx, Pair(adv_agent, world), 0.0,
-                 olm_dt, olm_h)
+                 olm_pofs_dt, olm_h)
     adv_nx[1] = mod(adv_nx[1], world.road.path.S[end])
 
     adv_NX[oidx] = adv_nx
@@ -95,12 +86,13 @@ function select_action_pofs(node::GroupTree, agent::Agent, adv_agent::Agent,
 
   # for each action, evaluate
   max_r = -Inf
+  us = Float64[]
   for la in 0:(la_len - 1)
     u = dis.ls2x(ctrl_d, la)
     agent.custom = u
     nx = copy(node.value.x)
-    sim.advance!(sim.default_dynamics!, nx, Pair(agent, world), 0.0, olm_dt, 
-                 olm_h)
+    sim.advance!(sim.default_dynamics!, nx, Pair(agent, world), 0.0, 
+                 olm_pofs_dt, olm_h)
     nx[1] = mod(nx[1], world.road.path.S[end])
 
     ra = 0.0
@@ -114,7 +106,7 @@ function select_action_pofs(node::GroupTree, agent::Agent, adv_agent::Agent,
       r = reward(node.value.x, u, nx, agent, world)
       agent.custom = custom
 
-      bp = pomdp.update_belief(node.value.b, o, node.value.c)
+      bp = pomdp.update_belief(node.value.b, o, adv_c)
 
       value = PofsNode()
       value.x = nx
@@ -124,23 +116,24 @@ function select_action_pofs(node::GroupTree, agent::Agent, adv_agent::Agent,
       value.c = nc
 
       next_node = GroupTree(value)
-      next_r = select_action_pofs(next_node, agent, adv_agent, world, reward, 
-                                  ctrl_d, depth - 1)
+      (next_r, _) = select_action_pofs(next_node, agent, adv_agent, world, 
+                                       reward, ctrl_d, depth - 1)
       r += olm_gamma * next_r
       next_node.value.r = r
       node.next[la + 1][oidx] = next_node
 
       ra += r * reduce(+, map(i -> node.value.b[i] * 
-                              pomdp.P_adv(o, value.c, pomdp.DRIVERS[i]), 
+                              pomdp.P_adv(o, adv_c, pomdp.DRIVERS[i]), 
                               1:length(pomdp.DRIVERS)))
     end
 
     if ra > max_r
       max_r = ra
+      us = u
     end
   end
 
-  return max_r
+  return (max_r, us)
 end
 
 function controller_pofs!(u::AbstractArray{Float64}, 

@@ -32,6 +32,7 @@ function reward(x, u, nx, agent, world)
   end
 
   return base_r + coll_r
+  #return coll_r
 end
 
 function P_adv(o::Enum, c::Collision, s::Enum)

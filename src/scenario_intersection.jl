@@ -62,7 +62,7 @@ function main()
   x02 = [len_rd / 2 - 50.0; 25.0; 0]
   agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
 	agent2.controller! = pomdp.adv_controller!
-	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.STRONG]
+	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.MEDIUM]
 
 
   push!(world.agents, agent1)
@@ -82,7 +82,6 @@ function main()
   oldt = (time_ns() - t0) / 1e9
 
   frame = 0
-  boop = false
   while window
     t = (time_ns() - t0) / 1e9
 
@@ -112,11 +111,16 @@ function main()
       elseif agent.id == 2
         (o, cv) = adv.replan_adv(agent, world)
         agent.custom[3] = o
+
+        print("Agent 1: ")
+        (c, cv) = predict_collision(agent1.x, agent2.x, world)
+        println(c.ctype)
+        print("Agent 2: ")
         (c, cv) = predict_collision(agent2.x, agent1.x, world)
+        println(c.ctype)
+        println(c.d)
         b = pomdp.update_belief(b, o, c)
-        if c.ctype != pomdp.NO_COLLISION
-          boop = false
-        end
+
         #=
         if mod(frame, 30) == 0
           (c, _) = predict_collision(agent2.x, agent1.x, world)
@@ -167,8 +171,5 @@ function main()
     window = vis.visualize(context, to_visualize)
 
     oldt = t
-    if boop == true
-      return
-    end
   end
 end
