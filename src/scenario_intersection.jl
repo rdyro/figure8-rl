@@ -119,6 +119,7 @@ function main()
         (o, cv) = adv.replan_adv(agent, world)
         agent.custom[3] = o
 
+        #=
         print("Agent 1: ")
         (c, cv) = predict_collision(agent1.x, agent2.x, world)
         println(c.ctype)
@@ -126,6 +127,9 @@ function main()
         (c, cv) = predict_collision(agent2.x, agent1.x, world)
         println(c.ctype)
         println(c.d)
+        =#
+
+        (c, cv) = predict_collision(agent2.x, agent1.x, world)
         b = pomdp.update_belief(b, o, c)
       end
 
@@ -146,9 +150,19 @@ function main()
       ######################################
       cv = nothing
       if agent.id == 1
-        (_, cv) = predict_collision(agent1.x, agent2.x, world)
+        print("Agent 1: ")
+        (c, cv) = predict_collision(agent1.x, agent2.x, world)
+        print(c.ctype)
+        print(" ")
+        println(c.d)
+
+        print("Agent 2: ")
+        (c, cv) = predict_collision(agent2.x, agent1.x, world)
+        print(c.ctype)
+        print(" ")
+        println(c.d)
       elseif agent.id == 2
-        (_, cv) = predict_collision(agent2.x, agent1.x, world)
+        (c, cv) = predict_collision(agent2.x, agent1.x, world)
       end
       tap.add_to_frame!(tape, agent.x, diag, cv)
 			
