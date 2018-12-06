@@ -28,7 +28,7 @@ function reward(x, u, nx, agent, world)
   coll_r = 0.0
   if c.ctype != NO_COLLISION
     t = c.t < 1.0 ? 1.0 : c.t
-    coll_r += -2.5e3 * (max_d - c.d) / 10.0 * (max_t - t)
+    coll_r += -1e9 * (max_d - c.d) / 10.0 * (max_t - t)
   end
 
   return base_r + coll_r
