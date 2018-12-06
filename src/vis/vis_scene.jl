@@ -9,6 +9,7 @@ struct InfoBox
   ds_vec::RenderObject
   u1_vec::RenderObject
   u2_vec::RenderObject
+  c_vec::RenderObject
 
   id_text::RenderObject
   s_text::RenderObject
@@ -24,6 +25,7 @@ function InfoBox(context::Context, x::Float64, y::Float64, scaling::Float64)
   ds_vec = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0, [1.0, 0.0, 0.0])
   u1_vec = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0, [1.0, 1.0, 0.0])
   u2_vec = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0, [1.0, 1.0, 0.0])
+  c_vec = vis.make_vector_xy(context, 0.0, 0.0, 0.0, 0.0, [1.0, 1.0, 1.0])
 
   id_text = vis.make_text(context, "test", 0.0, 0.0, 0.5)
   s_text = vis.make_text(context, "test", 0.0, 0.0, 0.5)
@@ -40,7 +42,7 @@ function InfoBox(context::Context, x::Float64, y::Float64, scaling::Float64)
 
   box = RenderObject(context, [position, color, usetext, texcoord], elnb)
 
-  return InfoBox(context, x, y, scaling, ds_vec, u1_vec, u2_vec, 
+  return InfoBox(context, x, y, scaling, ds_vec, u1_vec, u2_vec, c_vec,
                  id_text, s_text, ds_text, p_text, u1_text, u2_text, box)
 end
 
@@ -63,6 +65,7 @@ function render(info::InfoBox)
   render(info.ds_vec)
   render(info.u1_vec)
   render(info.u2_vec)
+  render(info.c_vec)
   position = GLfloat[xmin, ymin, 
                      xmin, ymax, 
 

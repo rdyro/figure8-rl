@@ -5,12 +5,14 @@ push!(LOAD_PATH, dir_path * "/adv") # adversary policies
 push!(LOAD_PATH, dir_path * "/dis") # discretization
 push!(LOAD_PATH, dir_path * "/olm") 
 push!(LOAD_PATH, dir_path * "/pomdp") 
+push!(LOAD_PATH, dir_path * "/tap") 
 using sim
 using vis
 using adv
 using dis
 using olm
 using pomdp
+using tap
 
 using Serialization
 using Printf
@@ -81,8 +83,12 @@ function main()
   t0 = time_ns()
   oldt = (time_ns() - t0) / 1e9
 
-  frame = 0
   while window
+    tape = tap.Tape(world) # make the tap
+    tape.info_objs[1] = info1
+    tape.info_objs[2] = info2
+    tap.add_frame!(tape)
+
     t = (time_ns() - t0) / 1e9
 
     to_visualize = []
@@ -121,16 +127,6 @@ function main()
         println(c.ctype)
         println(c.d)
         b = pomdp.update_belief(b, o, c)
-
-        #=
-        if mod(frame, 30) == 0
-          (c, _) = predict_collision(agent2.x, agent1.x, world)
-          b = pomdp.update_belief(b, agent.custom[3], c)
-
-          frame = 0
-        end
-        frame += 1
-        =#
       end
 
       ## advance one frame in time
@@ -143,8 +139,18 @@ function main()
       end
 
       ## visualize
-      (x, y, sx, sy, dx, u) = diagnostic(agent, world, t)
+      diag = diagnostic(agent, world, t)
+      (x, y, sx, sy, dx, u) = diag
       agent.is_braking = dx[1] * u[1] < 0
+
+      ######################################
+      cv = nothing
+      if agent.id == 1
+        (_, cv) = predict_collision(agent1.x, agent2.x, world)
+      elseif agent.id == 2
+        (_, cv) = predict_collision(agent2.x, agent1.x, world)
+      end
+      tap.add_to_frame!(tape, agent.x, diag, cv)
 			
       if agent.id == 2
         vis.update_vector_xy!(v2, vis_scaling * x, vis_scaling * y,
@@ -169,7 +175,9 @@ function main()
     push!(to_visualize, info2)
 		push!(to_visualize, v2)
 
-    window = vis.visualize(context, to_visualize)
+    to_vis = tap.visualize_frame(tape, 1)
+    #window = vis.visualize(context, to_visualize)
+    window = vis.visualize(context, to_vis)
 
     oldt = t
   end
