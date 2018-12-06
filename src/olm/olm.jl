@@ -3,7 +3,6 @@ dir = @__DIR__
 
 push!(LOAD_PATH, dir * "/../sim")
 push!(LOAD_PATH, dir * "/../dis")
-
 using sim
 using dis
 
@@ -29,5 +28,6 @@ end
 
 include(dir * "/olm_mcts.jl")
 include(dir * "/olm_fwds.jl")
+include(dir * "/olm_pofs.jl")
 
 end
