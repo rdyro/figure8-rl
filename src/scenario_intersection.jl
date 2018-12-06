@@ -101,6 +101,8 @@ function main()
       cv = nothing
       if agent.id == 2
         (agent.custom[3], cv) = adv.replan_adv(agent, world)
+        (c, _) = predict_collision(agent2.x, agent1.x, world)
+        update_belief
       end
 
       ## advance one frame in time

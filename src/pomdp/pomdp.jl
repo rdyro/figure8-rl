@@ -68,11 +68,10 @@ function P_adv(o::Enum, c::Collision, s::Enum)
   end
 end
 
-function update_belief(b::AbstractArray{Float64, 1}, o::Enum,
-                       c::Collision, s::Enum)
+function update_belief(b::AbstractArray{Float64, 1}, o::Enum, c::Collision)
   bp = similar(b)
   for i in 1:length(b)
-    bp[i] = b[i] * P_adv(o, c, s)
+    bp[i] = b[i] * P_adv(o, c, DRIVERS[i])
   end
   bp ./= sum(bp)
 
