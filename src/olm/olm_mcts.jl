@@ -3,14 +3,13 @@ const olm_mcts_iterations = 1000 # exploration parameter for MCTS
 
 mutable struct MctsNode
   x::AbstractArray{Float64, 1}
-  la::Int
   u::AbstractArray{Float64, 1}
   q::Float64
   N::Int
   Ns::Int
 
-  MctsNode() = new(Float64[], -1, Float64[], 0.0, 1, 1)
-  MctsNode(x, la, u, r) = new(x, la, u, r, 1, 1)
+  MctsNode() = new(Float64[], Float64[], 0.0, 1, 1)
+  MctsNode(x, u, r) = new(x, u, r, 1, 1)
 end
 
 function plan_mcts(x::AbstractArray{Float64, 1}, agent::Agent, world::World, 
@@ -62,7 +61,7 @@ function simulate_mcts(node::Tree, agent::Agent, world::World,
 
       r = reward(node.value.x, u, nx, agent, world)
 
-      value = MctsNode(nx, la, u, r)
+      value = MctsNode(nx, u, r)
       node.next[la + 1] = Tree(value)
     end
 
@@ -81,6 +80,7 @@ function simulate_mcts(node::Tree, agent::Agent, world::World,
     end
   end
 
+  # transition to the new state deterministically
   x = node.value.x
   u = node.next[as].value.u
   nx = node.next[as].value.x
@@ -88,6 +88,7 @@ function simulate_mcts(node::Tree, agent::Agent, world::World,
 
   q = r + olm_gamma * simulate_mcts(node.next[as], agent, world, reward, 
                                     ctrl_d, visited, depth - 1)
+
   # update Qsa for fuck's sake ---------------------------------------------- #
   #dq = (q - node.next[as].value.q)
   #node.next[as].value.q += dq / node.next[as].value.N
