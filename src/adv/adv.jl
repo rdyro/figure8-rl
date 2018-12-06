@@ -106,7 +106,7 @@ function predict_collision(agent_self::Agent,
 	# Determine collision type
 	collision_type = 0
 
-	if norm(c_v) < 6.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
+	if norm(c_v) < 10.0 && 0.0 < t_c < 1.5 # Predicted collision criteria
 		if -pi / 2 < th_collision < pi / 2
 			collision_type = HITTING
 		else

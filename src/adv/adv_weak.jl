@@ -44,12 +44,15 @@ function weak_controller!(u::AbstractArray{Float64},
 	end
 
 	if collision_detected
-		u[1] = -1 * x[2] # Reduce velocity by 20%
+		# u[1] = -1 * x[2] # Reduce velocity by 20%
+		u[1] = 0.0
 	else
-		u[1] = 0.1 * (target_v - x[2])
+		# u[1] = 0.1 * (target_v - x[2])
+		u[1] = 0.0
 	end
 
-	u[2] = -1 * x[3] / dx[1]
+	# u[2] = -1 * x[3] / dx[1]
+	u[2] = 0.0
 
 	return
 end

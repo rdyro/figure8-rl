@@ -70,11 +70,11 @@ function main()
 	len_rd = path.S[end]
 
   # make the agents
-  x01 = [len_rd / 2 - 50.0; 15.0; 0]
+  x01 = [len_rd / 2 - 10.0; 5.0; 0]
   agent1 = Agent(1, copy(x01), vis.make_car(context, [0.0, 1.0, 0.0]))
 	agent1.controller! = adv.weak_controller!
 
-  x02 = [len_rd - 50.0; 15.0; 0.0]
+  x02 = [len_rd - 20.0; 15.0; 0.0]
   agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
 	agent2.controller! = adv.strong_controller!
 
