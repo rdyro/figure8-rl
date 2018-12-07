@@ -89,13 +89,15 @@ function main()
   agent3 = Agent(3, copy(x0), vis.make_car(context, [0.0, 1.0, 0.0]))
   push!(world.agents, agent3)
 
-  #=
+  println("Welcome")
+  flush(stdout)
   IT = Int[]
   FLIP = Int[]
   t1 = time_ns()
   S = mdp.make_MDP(agent1, world, reward, state_d, ctrl_d)
   t2 = time_ns()
   println("Building takes $((t2 - t1) / 1e9) s")
+  flush(stdout)
 
   P = Policy(S, 0.999)
   i = 1
@@ -109,14 +111,17 @@ function main()
     push!(FLIP, flip)
 
     println(flip)
+    flush(stdout)
 
     i += 1
   end
   t2 = time_ns()
   println("Iteration takes $((t2 - t1) / 1e9) s")
+  flush(stdout)
 
   writedlm("../data/vlit_it.txt", [IT FLIP])
-  =#
+
+  return
 
 
   # Value Iteration Approach ------------------------------------------------ #

@@ -7,7 +7,7 @@ set xlabel "Iteration # (1)"
 set ylabel "Number of Revised Actions (1)"
 set format y "%5.1e"
 
-plot "../data/vlit_it.txt" u 1:2 w l not lw 2 lc rgb 'blue'
+plot "../data/vlit_it.txt" u 1:2 w l not lw 2 lc rgb 'red'
 ###############################################################################
 
 ###############################################################################
@@ -26,8 +26,8 @@ set key right bottom
 
 plot "../data/vlit_avgv.txt" u ($0 + 1):($1) w l not lw 2 dt 2 lc rgb 'red', \
 "../data/vlit_avgv.txt" u ($0 + 1):($1) w p title 'Value Iteration' lw 2 pt 4 ps 2 lc rgb 'red', \
-"../data/fwds_avgv.txt" u ($0 + 1):($1) w l not lw 2 dt 2 lc rgb 'blue', \
-"../data/fwds_avgv.txt" u ($0 + 1):($1) w p title 'Forward Search' lw 2 pt 4 ps 2 lc rgb 'blue', \
+"../data/fwds_avgv.txt" u ($0 + 1):($1) w l not lw 2 dt 2 lc rgb '#4444FF', \
+"../data/fwds_avgv.txt" u ($0 + 1):($1) w p title 'Forward Search' lw 2 pt 4 ps 2 lc rgb '#4444FF', \
 "../data/mcts_avgv.txt" u ($0 + 1):($1) w l not lw 2 dt 2 lc rgb 'black', \
 "../data/mcts_avgv.txt" u ($0 + 1):($1) w p title 'MCTS' lw 2 pt 4 ps 2 lc rgb 'black'
 ###############################################################################
@@ -46,8 +46,8 @@ set xtics 1
 
 set key left top
 
-plot "../data/fwds_avgc.txt" u ($0 + 1):($1) w l not lw 2 dt 2 lc rgb 'blue', \
-"../data/fwds_avgc.txt" u ($0 + 1):($1) w p title 'Forward Search' lw 2 pt 4 ps 2 lc rgb 'blue', \
+plot "../data/fwds_avgc.txt" u ($0 + 1):($1) w l not lw 2 dt 2 lc rgb '#4444FF', \
+"../data/fwds_avgc.txt" u ($0 + 1):($1) w p title 'Forward Search' lw 2 pt 4 ps 2 lc rgb '#4444FF', \
 "../data/mcts_avgc.txt" u ($0 + 1):($1) w l not lw 2 dt 2 lc rgb 'black', \
 "../data/mcts_avgc.txt" u ($0 + 1):($1) w p title 'MCTS' lw 2 pt 4 ps 2 lc rgb 'black'
 ###############################################################################
@@ -86,8 +86,8 @@ set xtics 1
 
 set key left top
 
-plot "../data/fwds_avgc.txt" u ($0 + 1):($1) w l not lw 2 dt 2 lc rgb 'blue', \
-"../data/fwds_avgc.txt" u ($0 + 1):($1) w p title 'Forward Search' lw 2 pt 4 ps 2 lc rgb 'blue', \
+plot "../data/fwds_avgc.txt" u ($0 + 1):($1) w l not lw 2 dt 2 lc rgb '#4444FF', \
+"../data/fwds_avgc.txt" u ($0 + 1):($1) w p title 'Forward Search' lw 2 pt 4 ps 2 lc rgb '#4444FF', \
 "../data/mcts_avgc.txt" u ($0 + 1):($1) w l not lw 2 dt 2 lc rgb 'black', \
 "../data/mcts_avgc.txt" u ($0 + 1):($1) w p title 'MCTS' lw 2 pt 4 ps 2 lc rgb 'black', \
 "../data/pofs_avgc.txt" u ($0 + 1):($1) w l not lw 2 dt 2 lc rgb '#009900', \
