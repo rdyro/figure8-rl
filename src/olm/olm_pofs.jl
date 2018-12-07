@@ -55,7 +55,6 @@ end
 function select_action_pofs(node::GroupTree, agent::Agent, adv_agent::Agent, 
                             world::World, reward::Function, 
                             ctrl_d::Discretization, depth::Int)
-  println("HELLO")
   if depth <= 0
     return (0.0, Float64[])
   end

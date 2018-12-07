@@ -85,7 +85,8 @@ function main(use_tape::Bool=false)
   N = round(Int, tf / dt)
   D = 4
   global T = Array{Float64, 2}(undef, (N, D))
-  global Cfwds = Array{Float64, 2}(undef, (N, D))
+  global Cpofs = Array{Float64, 2}(undef, (N, D))
+  global Cpomc = Array{Float64, 2}(undef, (N, D))
  
   do_vis = false
   for j in 1:D
@@ -103,10 +104,16 @@ function main(use_tape::Bool=false)
       end
 
       t1 = time_ns() / 1e9
+      (u, ret) = olm.plan_pomc(agent1.x, b, agent1, agent2, world, 
+                               pomdp.reward, ctrl_d, j)
+      t2 = time_ns() / 1e9
+      Cpomc[i, j] = t2 - t1
+
+      t1 = time_ns() / 1e9
       (u, ret) = olm.plan_pofs(agent1.x, b, agent1, agent2, world, 
                                pomdp.reward, ctrl_d, j)
       t2 = time_ns() / 1e9
-      Cfwds[i, j] = t2 - t1
+      Cpofs[i, j] = t2 - t1
       agent1.custom = u
 
 
@@ -149,13 +156,21 @@ function main(use_tape::Bool=false)
     println("Finished depth = $(j)")
   end
 
-  DATAfwds = fill(0.0, (N, 2 * D))
+  DATApofs = fill(0.0, (N, 2 * D))
+  DATApomc = fill(0.0, (N, 2 * D))
   for i in 1:D
-    DATAfwds[:, 2 * (i - 1) + 1] = T[:, i]
-    DATAfwds[:, 2 * (i - 1) + 2] = Cfwds[:, i]
-  end
-  writedlm("../data/pofs_data.txt", DATAfwds)
+    DATApofs[:, 2 * (i - 1) + 1] = T[:, i]
+    DATApofs[:, 2 * (i - 1) + 2] = Cpofs[:, i]
 
-  AVGCfwds = map(i -> mean(DATAfwds[:, 2 * (i - 1) + 2]), 1:D)
-  writedlm("../data/pofs_avgc.txt", AVGCfwds)
+    DATApomc[:, 2 * (i - 1) + 1] = T[:, i]
+    DATApomc[:, 2 * (i - 1) + 2] = Cpomc[:, i]
+  end
+  writedlm("../data/pofs_data.txt", DATApofs)
+  writedlm("../data/pomc_data.txt", DATApomc)
+
+  AVGCpofs = map(i -> mean(DATApofs[:, 2 * (i - 1) + 2]), 1:D)
+  AVGCpomc = map(i -> mean(DATApomc[:, 2 * (i - 1) + 2]), 1:D)
+
+  writedlm("../data/pofs_avgc.txt", AVGCpofs)
+  writedlm("../data/pomc_avgc.txt", AVGCpomc)
 end

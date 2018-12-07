@@ -58,9 +58,7 @@ function discretize_fwds(world::World)
 end
 
 function reward(x, u, nx, agent, world)
-  return abs(x[3]) > 0.35 * world.road.width ? -1e9 : nx[2]^3
-  #penalty = abs(x[3]) > 0.35 * world.road.width ? 1e9 * (exp(abs(x[3]) - 0.35 * world.road.width) - 1) : 0
-  #return x[2]^3 - penalty
+  return nx[2]^3 + (abs(x[3]) > 0.45 * world.road.width ? -1e9 : 0.0)
 end
 
 # Scenario: Racer scenario
@@ -154,7 +152,7 @@ function main()
       # Forward Search Approach --------------------------------------------- #
       if agent.id == 2
         print("FWDS: ")
-        @time u = olm.plan_fwds(agent.x, agent, world, reward, ctrl_d, 3)
+        @time u = olm.plan_fwds(agent.x, agent, world, reward, ctrl_d, 1)
         agent.custom = u
       end
       # --------------------------------------------------------------------- #
@@ -162,7 +160,7 @@ function main()
       # MCTS Approach ------------------------------------------------------- #
       if agent.id == 3
         print("MCTS: ")
-        @time us = olm.plan_mcts(agent.x, agent, world, reward, ctrl_d, 4)
+        @time us = olm.plan_mcts(agent.x, agent, world, reward, ctrl_d, 1)
         agent.custom = us
       end
       # --------------------------------------------------------------------- #

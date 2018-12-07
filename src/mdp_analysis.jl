@@ -60,9 +60,7 @@ function discretize_fwds(world::World)
 end
 
 function reward(x, u, nx, agent, world)
-  return abs(x[3]) > 0.35 * world.road.width ? -1e9 : x[2]^3
-  #penalty = abs(x[3]) > 0.35 * world.road.width ? 1e9 * (exp(abs(x[3]) - 0.35 * world.road.width) - 1) : 0
-  #return x[2]^3 - penalty
+  return nx[2]^3 + (abs(x[3]) > 0.5 * world.road.width ? -1e9 : 0.0)
 end
 
 # Scenario: Racer scenario
@@ -180,12 +178,10 @@ function main()
 
       # Forward Search Approach --------------------------------------------- #
       t1 = time_ns()
-      u = olm.plan_fwds(agent2.x, agent2, world, reward, ctrl_d, 1)
+      u = olm.plan_fwds(agent2.x, agent2, world, reward, ctrl_d, j)
       t2 = time_ns()
       Cfwds[i, j] = (t2 - t1) / 1e9
       Vfwds[i, j] = agent2.x[2]
-
-      return
 
       agent2.custom = u
       # --------------------------------------------------------------------- #

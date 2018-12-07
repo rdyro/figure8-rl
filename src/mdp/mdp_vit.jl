@@ -65,7 +65,7 @@ function dynamicsd!(dx::AbstractArray{Float64},
   dis.clamp_x!(state_d, x)
 end
 
-const vit_dt = 1.5 # time increment for planning
+const vit_dt = 1.0 # time increment for planning
 const vit_h = 1e-1 # dt for numerical integration
 function make_MDP(agent::Agent, world::World, reward::Function, 
                   state_d::Discretization, ctrl_d::Discretization)

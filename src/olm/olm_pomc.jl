@@ -1,6 +1,6 @@
 const olm_pomc_c = 1e5 # exploration parameter for MCTS
 const olm_pomc_iterations = 300 # exploration parameter for MCTS
-const olm_pomc_dt = 0.3 # exploration parameter for MCTS
+const olm_pomc_dt = 0.5 # exploration parameter for MCTS
 
 mutable struct PomcNode
   x::AbstractArray{Float64, 1}

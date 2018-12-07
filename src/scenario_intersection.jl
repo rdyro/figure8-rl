@@ -54,6 +54,7 @@ function main(use_tape::Bool=false)
   x01 = [len_rd - 50.0; 25.0; 0.0]
   agent1 = Agent(1, copy(x01), vis.make_car(context))
 	agent1.controller! = olm.controller_pomc!
+	#agent1.controller! = olm.controller_pofs!
   agent1.custom = [0.0, 0.0]
   b0 = fill(1 / length(pomdp.DRIVERS), length(pomdp.DRIVERS))
   #b0 = [0.0, 1.0, 0.0]
@@ -66,6 +67,8 @@ function main(use_tape::Bool=false)
   x02 = [len_rd / 2 - 50.0; v_track; 0]
   agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
 	agent2.controller! = pomdp.adv_controller!
+	#agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.WEAK]
+	#agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.MEDIUM]
 	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.STRONG]
 
   push!(world.agents, agent1)
@@ -104,7 +107,7 @@ function main(use_tape::Bool=false)
         if agent.id == 1
           (_, cv) = predict_collision(agent1.x, agent2.x, world)
         elseif agent.id == 2
-          global (u, ret) = olm.plan_pofs(agent1.x, b, agent1, agent2, world, 
+          (u, ret) = olm.plan_pofs(agent1.x, b, agent1, agent2, world, 
                                           pomdp.reward, ctrl_d, 3)
           agent1.custom = u
 
@@ -158,8 +161,10 @@ function main(use_tape::Bool=false)
       for agent in world.agents
         cv = nothing
         if agent.id == 1
-          global (u, ret) = olm.plan_pomc(agent1.x, b, agent1, agent2, world, 
+          (u, ret) = olm.plan_pomc(agent1.x, b, agent1, agent2, world, 
                                           pomdp.reward, ctrl_d, 3)
+          #(u, ret) = olm.plan_pofs(agent1.x, b, agent1, agent2, world, 
+          #                                pomdp.reward, ctrl_d, 3)
           agent1.custom = u
           (_, cv) = predict_collision(agent1.x, agent2.x, world)
 
