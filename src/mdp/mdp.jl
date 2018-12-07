@@ -1,3 +1,4 @@
+# MDP problem tools and value iteratation
 module mdp
 using DelimitedFiles 
 export State, DetState, Policy, RandomPolicy

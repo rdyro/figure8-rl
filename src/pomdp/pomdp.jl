@@ -1,3 +1,4 @@
+# description and problem definition of the POMDP problem
 module pomdp
 dir_path = @__DIR__
 push!(LOAD_PATH, dir_path * "/../sim") # simulation
@@ -27,14 +28,12 @@ function reward(x, u, nx, agent, world)
   base_r = abs(x[3]) > 0.35 * world.road.width ? -1e9 : nx[2]^3
   coll_r = 0.0
   if c.ctype != NO_COLLISION
-  #if c.ctype == HITTING
     t = c.t < 1.0 ? 1.0 : c.t
     coll_r = -1e9 * (max_d - c.d) / 10.0 * (max_t - t)
     coll_r = c.ctype == BEING_HIT ? coll_r * 1e-5 : coll_r
   end
 
   return base_r + coll_r
-  #return coll_r
 end
 
 function P_adv(o::Enum, c::Collision, s::Enum)

@@ -1,3 +1,4 @@
+# main simulation module for evaluating dynamics and creating the world
 module sim
 
 dir_path = @__DIR__

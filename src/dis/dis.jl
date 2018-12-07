@@ -1,3 +1,4 @@
+# state/control discretization module
 module dis
 
 export Discretization

@@ -1,3 +1,4 @@
+# adverserial interations module
 module adv
 dir_path = @__DIR__
 push!(LOAD_PATH, dir_path * "/../sim") # simulation

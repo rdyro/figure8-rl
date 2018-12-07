@@ -1,6 +1,0 @@
-\contentsline {section}{\numberline {1}Abstract}{2}
-\contentsline {section}{\numberline {2}Introduction}{2}
-\contentsline {section}{\numberline {3}Methods}{2}
-\contentsline {section}{\numberline {4}Results}{2}
-\contentsline {section}{\numberline {5}Discussion}{2}
-\contentsline {section}{\numberline {6}Conclusions}{2}

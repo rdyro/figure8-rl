@@ -1,3 +1,4 @@
+# the main visualization module for OpenGL abstraction rendering
 module vis
 
 using GLFW

@@ -1,3 +1,4 @@
+# module for tap(ing) the simulation to achieve playaback at a later time
 module tap
 
 dir = @__DIR__
