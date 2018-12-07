@@ -58,7 +58,7 @@ function discretize_fwds(world::World)
 end
 
 function reward(x, u, nx, agent, world)
-  return abs(x[3]) > 0.35 * world.road.width ? -1e9 : x[2]^3
+  return abs(x[3]) > 0.35 * world.road.width ? -1e9 : nx[2]^3
   #penalty = abs(x[3]) > 0.35 * world.road.width ? 1e9 * (exp(abs(x[3]) - 0.35 * world.road.width) - 1) : 0
   #return x[2]^3 - penalty
 end

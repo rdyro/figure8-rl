@@ -66,7 +66,7 @@ function main(use_tape::Bool=false)
   x02 = [len_rd / 2 - 50.0; v_track; 0]
   agent2 = Agent(2, copy(x02), vis.make_car(context, [1.0, 0.0, 0.0]))
 	agent2.controller! = pomdp.adv_controller!
-	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.STRONG]
+	agent2.custom = [v_track, p_track, pomdp.NOTHING, ctrl_d, pomdp.WEAK]
 
   push!(world.agents, agent1)
   push!(world.agents, agent2)

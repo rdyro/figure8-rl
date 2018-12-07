@@ -91,6 +91,7 @@ function main()
   agent3 = Agent(3, copy(x0), vis.make_car(context, [0.0, 1.0, 0.0]))
   push!(world.agents, agent3)
 
+  #=
   IT = Int[]
   FLIP = Int[]
   t1 = time_ns()
@@ -117,9 +118,8 @@ function main()
   println("Iteration takes $((t2 - t1) / 1e9) s")
 
   writedlm("../data/vlit_it.txt", [IT FLIP])
+  =#
 
-
-  return
 
   # Value Iteration Approach ------------------------------------------------ #
   # read in, iterate and store the policy
@@ -180,10 +180,12 @@ function main()
 
       # Forward Search Approach --------------------------------------------- #
       t1 = time_ns()
-      u = olm.plan_fwds(agent2.x, agent2, world, reward, ctrl_d, j)
+      u = olm.plan_fwds(agent2.x, agent2, world, reward, ctrl_d, 1)
       t2 = time_ns()
       Cfwds[i, j] = (t2 - t1) / 1e9
       Vfwds[i, j] = agent2.x[2]
+
+      return
 
       agent2.custom = u
       # --------------------------------------------------------------------- #

@@ -24,7 +24,7 @@ const max_d = 10.0
 function reward(x, u, nx, agent, world)
   c = agent.custom
 
-  base_r = abs(x[3]) > 0.35 * world.road.width ? -1e9 : x[2]^3
+  base_r = abs(x[3]) > 0.35 * world.road.width ? -1e9 : nx[2]^3
   coll_r = 0.0
   if c.ctype != NO_COLLISION
   #if c.ctype == HITTING

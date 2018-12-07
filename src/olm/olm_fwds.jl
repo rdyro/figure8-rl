@@ -51,6 +51,8 @@ function select_action_fwds(node::Tree, agent::Agent, world::World,
     r = reward(node.value.x, u, nx, agent, world) + olm_gamma * next_r
     node.next[la + 1].value.r = r
 
+    #println("x = $(node.value.x), u = $(u), nx = $(nx), r = $(r)")
+
     if r > max_r
       max_r = r
     end
