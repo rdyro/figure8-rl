@@ -1,5 +1,5 @@
 const olm_mcts_c = 1e5 # exploration parameter for MCTS
-const olm_mcts_iterations = 1000 # exploration parameter for MCTS
+const olm_mcts_iterations = 300 # exploration parameter for MCTS
 
 mutable struct MctsNode
   x::AbstractArray{Float64, 1}
@@ -21,8 +21,10 @@ function plan_mcts(x::AbstractArray{Float64, 1}, agent::Agent, world::World,
   value.x = x
   node = Tree(value)
 
+  num_iterations = round(Int, olm_mcts_iterations / 4 * depth)
+
   visited = Set{MctsNode}()
-  for i in 1:olm_mcts_iterations
+  for i in 1:num_iterations
     simulate_mcts(node, agent, world, reward, 
                   ctrl_d, visited, depth)
   end
