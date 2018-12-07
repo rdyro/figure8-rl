@@ -29,5 +29,6 @@ end
 include(dir * "/olm_mcts.jl")
 include(dir * "/olm_fwds.jl")
 include(dir * "/olm_pofs.jl")
+include(dir * "/olm_pomc.jl")
 
 end

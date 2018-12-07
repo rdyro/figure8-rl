@@ -55,6 +55,7 @@ end
 function select_action_pofs(node::GroupTree, agent::Agent, adv_agent::Agent, 
                             world::World, reward::Function, 
                             ctrl_d::Discretization, depth::Int)
+  println("HELLO")
   if depth <= 0
     return (0.0, Float64[])
   end
@@ -75,7 +76,7 @@ function select_action_pofs(node::GroupTree, agent::Agent, adv_agent::Agent,
     oidx = Int(o)
 
     adv_nx = copy(node.value.adv_x)
-    adv_u = fill(0.0, ctrl_d.dim)
+    #adv_u = fill(0.0, ctrl_d.dim)
     adv_agent.custom[3] = o
     sim.advance!(sim.default_dynamics!, adv_nx, Pair(adv_agent, world), 0.0,
                  olm_pofs_dt, olm_h)

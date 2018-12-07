@@ -1,8 +1,20 @@
 ###############################################################################
 set terminal pngcairo dashed size 900,650 font "Arial,18"
+set output "mdp_it.png"
+
+set logscale y 10
+set xlabel "Iteration # (1)"
+set ylabel "Number of Revised Actions (1)"
+set format y "%5.1e"
+
+plot "../data/vlit_it.txt" u 1:2 w l not lw 2 lc rgb 'blue'
+###############################################################################
+
+###############################################################################
+set terminal pngcairo dashed size 900,650 font "Arial,18"
 set output "mdp_v.png"
 
-#set logscale y 10
+unset logscale y
 set xlabel "Depth (1)"
 set xrange [1:]
 set ylabel "Average Velocity (m/s)"
